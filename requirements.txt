@@ -1,0 +1,17 @@
+pandas
+numpy
+matplotlib
+matplotlib.pyplot
+seaborn
+folium
+HeatMap
+MarkerCluster
+sklearn.cluster
+KMeans
+sklearn.preprocessing
+StandardScaler
+datetime
+matplotlib.colors
+warnings
+difflib
+os

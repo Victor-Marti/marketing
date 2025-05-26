@@ -1,5 +1,7 @@
 
-![Banner](images/output_20250526_102343.jpg)
+<p align="center">
+  <img src="images/output_20250526_102343.jpg" alt="Banner" width="600"/>
+</p>
 
 # 📈 Marketing Campaigns Analysis Dashboard
 

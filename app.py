@@ -565,14 +565,41 @@ try:
                 campaign_metrics['profit_per_dollar'] = campaign_metrics['net_profit'] / campaign_metrics['budget']
                 campaign_metrics_by_efficiency = campaign_metrics.sort_values('profit_per_dollar', ascending=False)
                 st.subheader("Net Profit per Dollar Invested by Campaign Type")
-                fig, ax = plt.subplots(figsize=(15,7))
-                sns.barplot(x='type', y='profit_per_dollar', data=campaign_metrics_by_efficiency, palette='viridis', ax=ax)
-                for i, v in enumerate(campaign_metrics_by_efficiency['profit_per_dollar']):
-                    ax.text(i, v, f'{v:,.2f}', ha='center', va='bottom', fontsize=12)
-                ax.set_title('Net Profit per Dollar Invested by Campaign Type')
-                ax.set_xlabel('Campaign Type')
-                ax.set_ylabel('Net Profit per Dollar')
-                st.pyplot(fig)
+                fig = px.bar(
+                    campaign_metrics_by_efficiency,
+                    x='type',
+                    y='profit_per_dollar',
+                    color='type',
+                    color_discrete_sequence=px.colors.qualitative.Vivid,
+                    text='profit_per_dollar',
+                    hover_data={
+                        'type': True,
+                        'profit_per_dollar': ':.2f',
+                        'net_profit': ':.2f',
+                        'budget': ':.2f',
+                        'revenue': ':.2f',
+                        'conversion_rate': ':.2f',
+                        'calculated_roi': ':.2f',
+                        'count': True
+                    },
+                    title='Net Profit per Dollar Invested by Campaign Type',
+                    labels={'type': 'Campaign Type', 'profit_per_dollar': 'Net Profit per Dollar'}
+                )
+                fig.update_traces(
+                    texttemplate='%{text:.2f}',
+                    textposition='outside',
+                    marker_line_width=1.5,
+                    marker_line_color='black'
+                )
+                fig.update_layout(
+                    template='plotly_dark',
+                    showlegend=False,
+                    xaxis_title='Campaign Type',
+                    yaxis_title='Net Profit per Dollar',
+                    height=500,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                st.plotly_chart(fig, use_container_width=True)
                 st.info("'Social media' campaigns generate the highest net profit per dollar invested (7.55), followed by 'email' (7.17) and 'podcast' (7.10). "
         "'Webinar' is lower (6.81), and 'event' is the least efficient (1.40). "
         "This metric reinforces the recommendation to prioritize social media and email campaigns for maximum efficiency.")

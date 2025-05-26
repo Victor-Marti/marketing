@@ -412,14 +412,16 @@ try:
     "Larger budgets (>75,000) are more stable but generally below 2,000 ROI. "
     "High-ROI campaigns do not necessarily generate the highest revenue, and all channels show similar ROI distributions.")
 
-            # Channel conclusions
-            st.markdown("""
-            **Conclusions:**  
-            - Promotion is the most used channel, but paid has the highest average ROI.  
-            - ROI is distributed homogeneously across channels.  
-            - Higher budgets do not guarantee higher ROI.  
-            - Social media campaigns in paid channels are the most efficient.
-            """)
+            col1, col2 = st.columns(2)
+            with col1:
+                # Channel conclusions
+                st.markdown("""
+                **Conclusions:**  
+                - Promotion is the most used channel, but paid has the highest average ROI.  
+                - ROI is distributed homogeneously across channels.  
+                - Higher budgets do not guarantee higher ROI.  
+                - Social media campaigns in paid channels are the most efficient.
+                """)
 
         # --- 2. Revenue & Conversion by Campaign Type ---
         with tabs[1]:

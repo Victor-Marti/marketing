@@ -412,16 +412,15 @@ try:
     "Larger budgets (>75,000) are more stable but generally below 2,000 ROI. "
     "High-ROI campaigns do not necessarily generate the highest revenue, and all channels show similar ROI distributions.")
 
-            col1, col2 = st.columns(2)
-            with col1:
-                # Channel conclusions
-                st.markdown("""
-                **Conclusions:**  
-                - Promotion is the most used channel, but paid has the highest average ROI.  
-                - ROI is distributed homogeneously across channels.  
-                - Higher budgets do not guarantee higher ROI.  
-                - Social media campaigns in paid channels are the most efficient.
-                """)
+            
+            # Channel conclusions
+            st.markdown("""
+            **Conclusions:**  
+            - Promotion is the most used channel, but paid has the highest average ROI.  
+            - ROI is distributed homogeneously across channels.  
+            - Higher budgets do not guarantee higher ROI.  
+            - Social media campaigns in paid channels are the most efficient.
+            """)
 
         # --- 2. Revenue & Conversion by Campaign Type ---
         with tabs[1]:
@@ -492,21 +491,6 @@ try:
                 st.info("Conversion rates are also homogeneous, ranging from 0.52 to 0.55 across most types. "
         "This indicates that the probability of converting leads is stable regardless of campaign type, with no type showing a clear advantage in conversion efficiency.")
 
-            # Revenue vs Conversion scatter
-            #st.subheader("Revenue vs Conversion Rate by Campaign Type")
-            #fig, ax = plt.subplots(figsize=(10, 6))
-            #sns.scatterplot(x='conversion_rate', y='revenue', size='count', sizes=(100, 500), hue='calculated_roi', data=campaign_metrics, palette='viridis', ax=ax)
-            #for i, row in campaign_metrics.iterrows():
-            #    ax.text(row['conversion_rate']+0.02, row['revenue'], row['type'], fontsize=11)
-            #ax.set_title('Revenue vs Conversion Rate by Campaign Type')
-            #ax.set_xlabel('Conversion Rate')
-            #ax.set_ylabel('Average Revenue')
-            #st.pyplot(fig)
-            #st.info("'Podcast' campaigns achieve the highest average revenue, despite having a similar conversion rate to other types. "
-    #"'Social media' stands out with the highest average ROI (most intense color), while 'event' campaigns are the lowest in both revenue and conversion. "
-    #"The size of the circles shows that 'social media' and 'email' are the most common types. "
-    #"Overall, the distribution is homogeneous, but small differences may indicate specific optimization opportunities.")
-
             # Key metrics table
             st.subheader("Key Metrics by Campaign Type")
             st.dataframe(campaign_metrics, use_container_width=True)
@@ -574,19 +558,6 @@ try:
                 st.plotly_chart(fig, use_container_width=True)
                 st.info("'Social media', 'email', and 'podcast' types are the most homogeneous and profitable in terms of net profit. "
         "'Webinar' is slightly below, while 'event' is much lower, making it the least profitable option.")
-
-            
-                # ROI vs Net Profit scatter
-                #campaign_metrics_filtered = campaign_metrics[campaign_metrics['type'] != 'event']
-                #st.subheader("ROI vs Net Profit by Campaign Type")
-                #fig, ax = plt.subplots(figsize=(10, 6))
-                #sns.scatterplot(x='calculated_roi', y='net_profit', size='count', sizes=(100, 500), hue='type', data=campaign_metrics_filtered, palette='viridis', ax=ax)
-                #ax.set_title('ROI vs Net Profit by Campaign Type')
-                #ax.set_xlabel('Average ROI')
-                #ax.set_ylabel('Average Net Profit')
-                #st.pyplot(fig)
-                #st.info("The top three campaign types show a homogeneous distribution in both ROI and net profit, confirming their consistency and reliability. "
-        #"This highlights the strategic value of focusing on these types for sustained profitability.")
 
             with col2:
                 # Efficiency: profit per dollar
@@ -1884,76 +1855,76 @@ try:
 
         years = yearly_performance.index.astype(str)
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            fig_rev = go.Figure()
-            fig_rev.add_trace(go.Scatter(
-                x=years,
-                y=yearly_performance['revenue'],
-                mode='lines+markers',
-                name='Revenue',
-                line=dict(width=3, color=color_map['revenue']),
-                marker=dict(size=8, color=color_map['revenue'], line=dict(width=1, color='black')),
-                hovertemplate="Year: %{x}<br>Revenue: %{y:,.0f}<extra></extra>"
-            ))
-            fig_rev.update_layout(
-                template='plotly_dark',
-                title='Revenue by Year',
-                xaxis_title='Year',
-                yaxis_title='Revenue',
-                height=300,
-                width=320,
-                margin=dict(l=20, r=20, t=40, b=20)
-            )
-            st.plotly_chart(fig_rev, use_container_width=True)
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                fig_rev = go.Figure()
+                fig_rev.add_trace(go.Scatter(
+                    x=years,
+                    y=yearly_performance['revenue'],
+                    mode='lines+markers',
+                    name='Revenue',
+                    line=dict(width=3, color=color_map['revenue']),
+                    marker=dict(size=8, color=color_map['revenue'], line=dict(width=1, color='black')),
+                    hovertemplate="Year: %{x}<br>Revenue: %{y:,.0f}<extra></extra>"
+                ))
+                fig_rev.update_layout(
+                    template='plotly_dark',
+                    title='Revenue by Year',
+                    xaxis_title='Year',
+                    yaxis_title='Revenue',
+                    height=300,
+                    width=320,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                st.plotly_chart(fig_rev, use_container_width=True)
 
-        with col2:
-            fig_roi = go.Figure()
-            fig_roi.add_trace(go.Scatter(
-                x=years,
-                y=yearly_performance['calculated_roi'],
-                mode='lines+markers',
-                name='ROI',
-                line=dict(width=3, color=color_map['calculated_roi']),
-                marker=dict(size=8, color=color_map['calculated_roi'], line=dict(width=1, color='black')),
-                hovertemplate="Year: %{x}<br>ROI: %{y:,.2f}<extra></extra>"
-            ))
-            fig_roi.update_layout(
-                template='plotly_dark',
-                title='ROI by Year',
-                xaxis_title='Year',
-                yaxis_title='ROI',
-                height=300,
-                width=320,
-                margin=dict(l=20, r=20, t=40, b=20)
-            )
-            st.plotly_chart(fig_roi, use_container_width=True)
+            with col2:
+                fig_roi = go.Figure()
+                fig_roi.add_trace(go.Scatter(
+                    x=years,
+                    y=yearly_performance['calculated_roi'],
+                    mode='lines+markers',
+                    name='ROI',
+                    line=dict(width=3, color=color_map['calculated_roi']),
+                    marker=dict(size=8, color=color_map['calculated_roi'], line=dict(width=1, color='black')),
+                    hovertemplate="Year: %{x}<br>ROI: %{y:,.2f}<extra></extra>"
+                ))
+                fig_roi.update_layout(
+                    template='plotly_dark',
+                    title='ROI by Year',
+                    xaxis_title='Year',
+                    yaxis_title='ROI',
+                    height=300,
+                    width=320,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                st.plotly_chart(fig_roi, use_container_width=True)
 
-        with col3:
-            fig_conv = go.Figure()
-            fig_conv.add_trace(go.Scatter(
-                x=years,
-                y=yearly_performance['conversion_rate'],
-                mode='lines+markers',
-                name='Conversion Rate',
-                line=dict(width=3, color=color_map['conversion_rate']),
-                marker=dict(size=8, color=color_map['conversion_rate'], line=dict(width=1, color='black')),
-                hovertemplate="Year: %{x}<br>Conversion Rate: %{y:,.2f}<extra></extra>"
-            ))
-            fig_conv.update_layout(
-                template='plotly_dark',
-                title='Conversion Rate by Year',
-                xaxis_title='Year',
-                yaxis_title='Conversion Rate',
-                height=300,
-                width=320,
-                margin=dict(l=20, r=20, t=40, b=20)
-            )
-            st.plotly_chart(fig_conv, use_container_width=True)
-            st.info(
-    "Yearly trends show stable or slightly increasing performance, with no evidence of long-term decline. "
-    "This indicates that the marketing strategy is resilient to annual fluctuations and external shocks, and that best practices are being maintained over time."
-)
+            with col3:
+                fig_conv = go.Figure()
+                fig_conv.add_trace(go.Scatter(
+                    x=years,
+                    y=yearly_performance['conversion_rate'],
+                    mode='lines+markers',
+                    name='Conversion Rate',
+                    line=dict(width=3, color=color_map['conversion_rate']),
+                    marker=dict(size=8, color=color_map['conversion_rate'], line=dict(width=1, color='black')),
+                    hovertemplate="Year: %{x}<br>Conversion Rate: %{y:,.2f}<extra></extra>"
+                ))
+                fig_conv.update_layout(
+                    template='plotly_dark',
+                    title='Conversion Rate by Year',
+                    xaxis_title='Year',
+                    yaxis_title='Conversion Rate',
+                    height=300,
+                    width=320,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                st.plotly_chart(fig_conv, use_container_width=True)
+                st.info(
+        "Yearly trends show stable or slightly increasing performance, with no evidence of long-term decline. "
+        "This indicates that the marketing strategy is resilient to annual fluctuations and external shocks, and that best practices are being maintained over time."
+    )
 
             # Conclusions
             st.markdown("""

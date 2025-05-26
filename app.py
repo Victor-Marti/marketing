@@ -1855,76 +1855,74 @@ try:
 
         years = yearly_performance.index.astype(str)
 
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                fig_rev = go.Figure()
-                fig_rev.add_trace(go.Scatter(
-                    x=years,
-                    y=yearly_performance['revenue'],
-                    mode='lines+markers',
-                    name='Revenue',
-                    line=dict(width=3, color=color_map['revenue']),
-                    marker=dict(size=8, color=color_map['revenue'], line=dict(width=1, color='black')),
-                    hovertemplate="Year: %{x}<br>Revenue: %{y:,.0f}<extra></extra>"
-                ))
-                fig_rev.update_layout(
-                    template='plotly_dark',
-                    title='Revenue by Year',
-                    xaxis_title='Year',
-                    yaxis_title='Revenue',
-                    height=300,
-                    width=320,
-                    margin=dict(l=20, r=20, t=40, b=20)
-                )
-                st.plotly_chart(fig_rev, use_container_width=True)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            fig_rev = go.Figure()
+            fig_rev.add_trace(go.Scatter(
+                x=years,
+                y=yearly_performance['revenue'],
+                mode='lines+markers',
+                name='Revenue',
+                line=dict(width=3, color=color_map['revenue']),
+                marker=dict(size=8, color=color_map['revenue'], line=dict(width=1, color='black')),
+                hovertemplate="Year: %{x}<br>Revenue: %{y:,.0f}<extra></extra>"
+            ))
+            fig_rev.update_layout(
+                template='plotly_dark',
+                title='Revenue by Year',
+                xaxis_title='Year',
+                yaxis_title='Revenue',
+                height=300,
+                width=320,
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig_rev, use_container_width=True)
 
-            with col2:
-                fig_roi = go.Figure()
-                fig_roi.add_trace(go.Scatter(
-                    x=years,
-                    y=yearly_performance['calculated_roi'],
-                    mode='lines+markers',
-                    name='ROI',
-                    line=dict(width=3, color=color_map['calculated_roi']),
-                    marker=dict(size=8, color=color_map['calculated_roi'], line=dict(width=1, color='black')),
-                    hovertemplate="Year: %{x}<br>ROI: %{y:,.2f}<extra></extra>"
-                ))
-                fig_roi.update_layout(
-                    template='plotly_dark',
-                    title='ROI by Year',
-                    xaxis_title='Year',
-                    yaxis_title='ROI',
-                    height=300,
-                    width=320,
-                    margin=dict(l=20, r=20, t=40, b=20)
-                )
-                st.plotly_chart(fig_roi, use_container_width=True)
+        with col2:
+            fig_roi = go.Figure()
+            fig_roi.add_trace(go.Scatter(
+                x=years,
+                y=yearly_performance['calculated_roi'],
+                mode='lines+markers',
+                name='ROI',
+                line=dict(width=3, color=color_map['calculated_roi']),
+                marker=dict(size=8, color=color_map['calculated_roi'], line=dict(width=1, color='black')),
+                hovertemplate="Year: %{x}<br>ROI: %{y:,.2f}<extra></extra>"
+            ))
+            fig_roi.update_layout(
+                template='plotly_dark',
+                title='ROI by Year',
+                xaxis_title='Year',
+                yaxis_title='ROI',
+                height=300,
+                width=320,
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig_roi, use_container_width=True)
 
-            with col3:
-                fig_conv = go.Figure()
-                fig_conv.add_trace(go.Scatter(
-                    x=years,
-                    y=yearly_performance['conversion_rate'],
-                    mode='lines+markers',
-                    name='Conversion Rate',
-                    line=dict(width=3, color=color_map['conversion_rate']),
-                    marker=dict(size=8, color=color_map['conversion_rate'], line=dict(width=1, color='black')),
-                    hovertemplate="Year: %{x}<br>Conversion Rate: %{y:,.2f}<extra></extra>"
-                ))
-                fig_conv.update_layout(
-                    template='plotly_dark',
-                    title='Conversion Rate by Year',
-                    xaxis_title='Year',
-                    yaxis_title='Conversion Rate',
-                    height=300,
-                    width=320,
-                    margin=dict(l=20, r=20, t=40, b=20)
-                )
-                st.plotly_chart(fig_conv, use_container_width=True)
-                st.info(
-        "Yearly trends show stable or slightly increasing performance, with no evidence of long-term decline. "
-        "This indicates that the marketing strategy is resilient to annual fluctuations and external shocks, and that best practices are being maintained over time."
-    )
+        with col3:
+            fig_conv = go.Figure()
+            fig_conv.add_trace(go.Scatter(
+                x=years,
+                y=yearly_performance['conversion_rate'],
+                mode='lines+markers',
+                name='Conversion Rate',
+                line=dict(width=3, color=color_map['conversion_rate']),
+                marker=dict(size=8, color=color_map['conversion_rate'], line=dict(width=1, color='black')),
+                hovertemplate="Year: %{x}<br>Conversion Rate: %{y:,.2f}<extra></extra>"
+            ))
+            fig_conv.update_layout(
+                template='plotly_dark',
+                title='Conversion Rate by Year',
+                xaxis_title='Year',
+                yaxis_title='Conversion Rate',
+                height=300,
+                width=320,
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig_conv, use_container_width=True)
+            st.info("Yearly trends show stable or slightly increasing performance, with no evidence of long-term decline. "
+    "This indicates that the marketing strategy is resilient to annual fluctuations and external shocks, and that best practices are being maintained over time.")
 
             # Conclusions
             st.markdown("""

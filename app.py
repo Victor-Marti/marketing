@@ -38,7 +38,7 @@ df = None
 @st.cache_data(ttl=3600)
 def load_data():
     try:
-        df = pd.read_csv(r"C:\Users\Victor\Documents\GitHub\marketing\data\marketingcampaigns_clean.csv")
+        df = pd.read_csv(r"data/marketingcampaigns_clean.csv")
         df['start_date'] = pd.to_datetime(df['start_date'], errors='coerce')
         df['end_date'] = pd.to_datetime(df['end_date'], errors='coerce')
         return df
@@ -58,7 +58,7 @@ try:
         st.stop()
 
     # --- Sidebar Filters ---
-    st.sidebar.image(r"C:\Users\Victor\Documents\GitHub\marketing\images\output_20250523_102024.jpg", width=300)
+    st.sidebar.image(r"../images/output_20250523_102024.jpg", width=300)
     st.sidebar.header("Filters")
     min_date = df['start_date'].min().date()
     max_date = df['end_date'].max().date()

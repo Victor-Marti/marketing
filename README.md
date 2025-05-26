@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="images/output_20250526_102343.jpg" alt="Banner" width="800" height="400"/>
+  <img src="images/output_20250526_102343.jpg" alt="Banner" width="800" height="600"/>
 </p>
 
 # 📈 Marketing Campaigns Analysis Dashboard

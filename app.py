@@ -855,30 +855,21 @@ try:
     "No substantial differences are observed between B2B and B2C audiences, but B2C shows slightly higher variability. "
     "There is a slight inverse relationship between budget and ROI: lower and mid-range budgets tend to achieve higher ROI, while very high budgets show lower efficiency. "
     "These patterns suggest that focusing on efficient channels and campaign types, and optimizing budget allocation, can maximize ROI."
-    "calculated_roi mediana por Canal:"
-    "channel"
-    "paid        856.77"
-    "organic     807.50"
-    "referral    772.62"
-    "promotion   689.32"
+    "calculated_roi mediana por Canal:\n"
+    "channel:\n"
+    "paid: 856.77 |  organic: 807.50 | referral    772.62 | promotion   689.32\n"
 
-    "calculated_roi mediana por Tipo de Campaña:"
-    "type"
-    "email          826.79"
-    "social media   794.50"
-    "podcast        771.54"
-    "webinar        739.42"
+    "calculated_roi mediana por Tipo de Campaña:\n"
+    "type:\n"
+    "email: 826.79 | social media   794.50 | podcast: 771.54 | webinar: 739.42\n"
 
-    "calculated_roi mediana por Audiencia Objetivo:"
-    "target_audience"
-    "B2B   780.18"
-    "B2C   771.68"
+    "calculated_roi mediana por Audiencia Objetivo:\n"
+    "target_audience:\n"
+    "B2B: 780.18 | B2C: 771.68"
 
-    "calculated_roi mediana por Categoría de Presupuesto:"
-    "budget_category"
-    "low budget      1,958.49"
-    "medium budget   1,248.13"
-    "high budget       562.75")
+    "calculated_roi mediana por Categoría de Presupuesto:\n"
+    "budget_category:\n"
+    "low budget: 1,958.49 | medium budget: 1,248.13 | high budget: 562.75")
 
             col1, col2 = st.columns(2)
             with col1:

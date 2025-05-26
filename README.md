@@ -1,5 +1,5 @@
 
-![Banner](images\output_20250526_102343.jpg)
+![Banner](images/output_20250526_102343.jpg)
 
 # 📈 Marketing Campaigns Analysis Dashboard
 

@@ -128,4 +128,5 @@ This project is licensed under the MIT License.
 👨‍💼 Author
 
 Developed by Victor — Data Science Analytics
-🔗 [LinkedIn](https://www.linkedin.com/in/victormartic)
+
+🔗 [LinkedIn](https://www.linkedin.com/in/victormartic) www.linkedin.com/in/victormarti

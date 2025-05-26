@@ -58,6 +58,7 @@ try:
         st.stop()
 
     # --- Sidebar Filters ---
+    st.sidebar.image(r"C:\Users\Victor\Documents\GitHub\marketing\images\output_20250523_102024.jpg", width=300)
     st.sidebar.header("Filters")
     min_date = df['start_date'].min().date()
     max_date = df['end_date'].max().date()

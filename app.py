@@ -1,4 +1,5 @@
 # --- Libraries ---
+from math import inf
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -10,6 +11,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 import statsmodels.api as sm
 import traceback
+from dash import Dash, dcc, html, Input, Output
+import plotly.figure_factory as ff
+import plotly.graph_objects as go
 
 # --- Page Config ---
 st.set_page_config(
@@ -169,37 +173,79 @@ try:
 
         # --- 1. Channel Analysis ---
         with tabs[0]:
+            col1, col2 = st.columns(2)
+
             st.header("Channel-Based Analysis")
             st.markdown("**This section explores the distribution, ROI, and comparative metrics of marketing channels.**")
 
-            # Frequency by channel
-            st.subheader("Channel Frequency")
-            channel_counts = filtered_df['channel'].value_counts()
-            fig, ax = plt.subplots(figsize=(20, 10))
-            sns.barplot(x=channel_counts.index, y=channel_counts.values, palette='viridis', ax=ax)
-            ax.set_title('Channel Usage Frequency')
-            ax.set_xlabel('Channel')
-            ax.set_ylabel('Number of Campaigns')
-            for i, v in enumerate(channel_counts.values):
-                ax.text(i, v + 5, str(v), ha='center')
-            st.pyplot(fig)
-            st.info("Promotion is the most frequent channel, followed by referral, paid, and organic. "
-"Promotion leads in campaign count (221), but paid achieves the highest average ROI. "
-"All channels show a balanced distribution, indicating a well-diversified marketing strategy. "
-"Referral and organic channels, while less frequent, still contribute significantly to overall performance.")
+            with col1:
+                # Frequency by channel
+                st.subheader("Conversion Rate by Channel and Audience")
+                channel_conversion = filtered_df.groupby(['target_audience', 'channel'])['conversion_rate'].mean().reset_index()
+                fig = px.bar(
+                    channel_conversion,
+                    x='channel',
+                    y='conversion_rate',
+                    color='target_audience',
+                    barmode='group',
+                    text_auto='.2f',
+                    title='Conversion Rate by Channel and Audience',
+                    color_discrete_sequence=px.colors.qualitative.Set3,  # Paleta moderna y diferente a las demás
+                    hover_data={
+                        'channel': True,
+                        'target_audience': True,
+                        'conversion_rate': ':.2f'
+                    }
+                )
+                fig.update_layout(
+                    template='plotly_dark',  # Fondo negro
+                    xaxis_title='Channel',
+                    yaxis_title='Conversion Rate',
+                    legend_title='Target Audience',
+                    height=500,
+                    bargap=0.18
+                )
+                fig.update_traces(
+                    marker_line_width=1.5,
+                    marker_line_color='black'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("Promotion is the most frequent channel, followed by referral, paid, and organic. "
+    "Promotion leads in campaign count (221), but paid achieves the highest average ROI. "
+    "All channels show a balanced distribution, indicating a well-diversified marketing strategy. "
+    "Referral and organic channels, while less frequent, still contribute significantly to overall performance.")
 
-            # ROI by channel (boxplot)
-            st.subheader("ROI Distribution by Channel")
-            fig, ax = plt.subplots(figsize=(8, 4))
-            sns.boxplot(x='channel', y='calculated_roi', data=filtered_df, palette='Set1', ax=ax)
-            ax.set_title('ROI Distribution by Channel')
-            ax.set_xlabel('Channel')
-            ax.set_ylabel('ROI')
-            st.pyplot(fig)
-            st.info("ROI distribution is homogeneous across channels. "
-"Paid stands out with the highest median ROI (894.45), but all channels have similar interquartile ranges. "
-"Paid also shows the lowest variability, suggesting more predictable results, while other channels have greater dispersion. "
-"This indicates that channel selection alone does not guarantee higher ROI—other factors such as campaign type and targeting are also important.")
+            with col2:
+                # ROI by channel (boxplot)
+                #st.subheader("ROI Distribution by Channel")
+                #fig, ax = plt.subplots(figsize=(20, 10))
+                #sns.boxplot(x='channel', y='calculated_roi', data=channel_metrics, palette='Set1', ax=ax)
+                #for i, v in enumerate(channel_metrics['calculated_roi']):
+                #    ax.text(i, v + 0.01, f'{v:.2f}', ha='center')
+                #ax.set_title('ROI Distribution by Channel')
+                #ax.set_xlabel('Channel')
+                #ax.set_ylabel('ROI')
+                #st.pyplot(fig)
+                st.subheader("ROI Distribution by Channel")
+                fig = px.box(
+                    filtered_df,
+                    x="channel",
+                    y="calculated_roi",
+                    color="channel",
+                    points="all",  # Muestra todos los puntos para mayor detalle
+                    title="ROI Distribution by Channel"
+                )
+                fig.update_traces(quartilemethod="exclusive")  # Consistente con tu plantilla
+                fig.update_layout(
+                    xaxis_title="Channel",
+                    yaxis_title="ROI",
+                    boxmode="group"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("ROI distribution is homogeneous across channels. "
+    "Paid stands out with the highest median ROI (894.45), but all channels have similar interquartile ranges. "
+    "Paid also shows the lowest variability, suggesting more predictable results, while other channels have greater dispersion. "
+    "This indicates that channel selection alone does not guarantee higher ROI—other factors such as campaign type and targeting are also important.")
 
             # Channel metrics table
             st.subheader("Channel Performance Metrics")
@@ -217,60 +263,153 @@ try:
 "Promotion and organic channels are nearly as effective, while referral lags slightly in ROI and conversion. "
 "The top three channels by ROI are paid, promotion, and organic, while referral is the lowest.")
 
-            # ROI bar chart by channel
-            st.subheader("Average ROI by Channel")
-            fig, ax = plt.subplots(figsize=(10, 5))
-            sns.barplot(x='channel', y='calculated_roi', data=channel_metrics, palette='viridis', ax=ax)
-            for i, v in enumerate(channel_metrics['calculated_roi']):
-                ax.text(i, v + 0.01, f'{v:.2f}', ha='center')
-            ax.set_title('Average ROI by Channel')
-            ax.set_xlabel('Channel')
-            ax.set_ylabel('Average ROI')
-            st.pyplot(fig)
-            st.info("The bar chart confirms paid as the channel with the highest average ROI, closely followed by promotion and organic. "
-"All four channels fluctuate between 806 and 894 in average ROI, indicating a balanced performance across the marketing mix.")
+            col1, col2 = st.columns(2)
+            with col1:
+                # ROI bar chart by channel (Plotly, fondo negro, colores modernos y diferentes)
+                st.subheader("Average ROI by Channel")
+                fig = px.bar(
+                    channel_metrics,
+                    x='channel',
+                    y='calculated_roi',
+                    color='channel',
+                    text_auto='.2f',
+                    title='Average ROI by Channel',
+                    color_discrete_sequence=px.colors.qualitative.Prism,  # Paleta moderna y diferente a las demás
+                    hover_data={
+                        'channel': True,
+                        'calculated_roi': ':.2f',
+                        'conversion_rate': ':.2f',
+                        'profit_margin': ':.2f',
+                        'revenue': ':.2f',
+                        'budget': ':.2f',
+                        'num_campaigns': True
+                    }
+                )
+                fig.update_layout(
+                    template='plotly_dark',  # Fondo negro
+                    xaxis_title='Channel',
+                    yaxis_title='Average ROI',
+                    showlegend=False,
+                    height=500,
+                    bargap=0.18,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                fig.update_traces(
+                    marker_line_width=1.5,
+                    marker_line_color='black'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("The bar chart confirms paid as the channel with the highest average ROI, closely followed by promotion and organic. "
+    "All four channels fluctuate between 806 and 894 in average ROI, indicating a balanced performance across the marketing mix.")
 
-            # ROI by channel and type (boxplot)
-            st.subheader("ROI by Channel and Campaign Type")
-            fig, ax = plt.subplots(figsize=(12, 6))
-            sns.boxplot(x='channel', y='calculated_roi', hue='type', data=filtered_df, showfliers=False, ax=ax)
-            ax.set_title('ROI by Channel and Campaign Type')
-            ax.set_xlabel('Channel')
-            ax.set_ylabel('ROI')
-            ax.legend(title='Campaign Type', loc='upper right')
-            st.pyplot(fig)
-            st.info("Paid channel shows the most stable ROI across types, with 50% of values between 450 and 1400. "
-"Other channels display greater variability, but the central 50% of all categories are between ROI 300 and 1500. "
-"This suggests that paid campaigns are more consistent, while other channels may offer higher upside but also more risk.")
+            with col2:
+                st.subheader("ROI by Channel and Campaign Type")
+                fig = px.box(
+                    filtered_df,
+                    x="channel",
+                    y="calculated_roi",
+                    color="type",
+                    points="all",  # Muestra todos los puntos para mayor detalle
+                    title="ROI by Channel and Campaign Type"
+                )
+                fig.update_traces(quartilemethod="exclusive")  # Consistente con tu plantilla
+                fig.update_layout(
+                    xaxis_title="Channel",
+                    yaxis_title="ROI",
+                    boxmode="group"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("Paid channel shows the most stable ROI across types, with 50% of values between 450 and 1400. "
+    "Other channels display greater variability, but the central 50% of all categories are between ROI 300 and 1500. "
+    "This suggests that paid campaigns are more consistent, while other channels may offer higher upside but also more risk.")
 
-            # ROI by channel and audience (boxplot)
-            st.subheader("ROI by Channel and Target Audience")
-            fig, ax = plt.subplots(figsize=(12, 6))
-            sns.boxplot(x='channel', y='calculated_roi', hue='target_audience', data=filtered_df, showfliers=False, ax=ax)
-            ax.set_title('ROI by Channel and Target Audience')
-            ax.set_xlabel('Channel')
-            ax.set_ylabel('ROI')
-            ax.legend(title='Target Audience')
-            st.pyplot(fig)
-            st.info("The top 25% ROI values are highly dispersed across audiences for all channels. "
-"This means that more than half of the audience-channel combinations fall below the overall mean ROI (849.4). "
-"There is no clear audience-channel combination that consistently outperforms others, highlighting the need for tailored strategies.")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("ROI by Channel and Target Audience")
+                x_axis = st.radio(
+                    "Eje X:",
+                    options=[
+                        "channel",
+                        "target_audience",
+                        "channel_audience"
+                    ],
+                    format_func=lambda x: {
+                        "channel": "Channel",
+                        "target_audience": "Target Audience",
+                        "channel_audience": "Channel + Audience"
+                    }[x],
+                    horizontal=True,
+                    key="roi_x_axis"
+                )
+                y_axis = st.radio(
+                    "Eje Y:",
+                    options=["calculated_roi"],
+                    format_func=lambda x: {"calculated_roi": "ROI"}[x],
+                    horizontal=True,
+                    key="roi_y_axis"
+                )
 
-            # ROI vs Budget scatter
-            st.subheader("ROI vs Budget by Channel")
-            fig, ax = plt.subplots(figsize=(12, 6))
-            sns.scatterplot(x='budget', y='calculated_roi', hue='channel', size='revenue', sizes=(50, 300), alpha=0.7, data=filtered_df, ax=ax)
-            ax.set_xlim(0, 105000)
-            ax.set_ylim(-300, 5000)
-            ax.set_title('Budget vs ROI by Channel')
-            ax.set_xlabel('Budget')
-            ax.set_ylabel('ROI')
-            st.pyplot(fig)
-            st.info("There is a slight negative trend between budget and ROI (correlation ≈ -0.13): "
-"higher budgets tend to have lower ROI, but the correlation is weak. "
-"Smaller budgets (<50,000) show greater ROI variability, with some campaigns reaching up to 5,000 ROI. "
-"Larger budgets (>75,000) are more stable but generally below 2,000 ROI. "
-"High-ROI campaigns do not necessarily generate the highest revenue, and all channels show similar ROI distributions.")
+                plot_df = filtered_df.copy()
+                if x_axis == "channel_audience":
+                    plot_df["channel_audience"] = plot_df["channel"] + " - " + plot_df["target_audience"]
+                    fig = px.box(plot_df, x="channel_audience", y=y_axis, color="channel")
+                else:
+                    fig = px.box(
+                        plot_df,
+                        x=x_axis,
+                        y=y_axis,
+                        color="channel" if x_axis == "channel" else "target_audience"
+                    )
+                fig.update_layout(title="ROI by Channel and Target Audience", xaxis_title=x_axis, yaxis_title=y_axis)
+                st.plotly_chart(fig, use_container_width=True)
+                st.info(
+                    "The top 25% ROI values are highly dispersed across audiences for all channels. "
+                    "This means that more than half of the audience-channel combinations fall below the overall mean ROI (849.4). "
+                    "There is no clear audience-channel combination that consistently outperforms others, highlighting the need for tailored strategies."
+    )
+
+            with col2:
+                # ROI vs Budget scatter
+                st.subheader("ROI vs Budget by Channel")
+                # Ordenar para que referral se dibuje primero y paid al final
+                channel_order = ["referral", "organic", "promotion", "paid"]
+                filtered_df['channel'] = pd.Categorical(filtered_df['channel'], categories=channel_order, ordered=True)
+                filtered_df = filtered_df.sort_values('channel')
+
+                size_values = filtered_df['calculated_roi'].abs()
+                if size_values.max() > 0:
+                    size_values = 20 + 80 * (size_values - size_values.min()) / (size_values.max() - size_values.min())
+                else:
+                    size_values = 40
+
+                fig_scatter = px.scatter(
+                    filtered_df,
+                    x="budget",
+                    y="calculated_roi",
+                    color="channel",
+                    size=size_values,
+                    size_max=40,  # Reduce el tamaño máximo para menos solapamiento
+                    opacity=0.7,  # Más opaco para distinguir colores
+                    hover_name="calculated_roi_performance",
+                    color_discrete_map={
+                        "paid": "blue",
+                        "organic": "green",
+                        "promotion": "orange",
+                        "referral": "purple"
+                    },
+                    labels={"budget": "budget", "calculated_roi": "calculated_roi"}
+                )
+
+                # Añade borde negro a los círculos
+                fig_scatter.update_traces(marker=dict(line=dict(width=1, color='black')))
+
+                fig_scatter.update_layout(height=500)
+                st.plotly_chart(fig_scatter, use_container_width=True)
+                st.info("There is a slight negative trend between budget and ROI (correlation ≈ -0.13): "
+    "higher budgets tend to have lower ROI, but the correlation is weak. "
+    "Smaller budgets (<50,000) show greater ROI variability, with some campaigns reaching up to 5,000 ROI. "
+    "Larger budgets (>75,000) are more stable but generally below 2,000 ROI. "
+    "High-ROI campaigns do not necessarily generate the highest revenue, and all channels show similar ROI distributions.")
 
             # Channel conclusions
             st.markdown("""
@@ -295,109 +434,207 @@ try:
                 'campaign_name': 'count'
             }).reset_index().rename(columns={'campaign_name': 'count'})
             campaign_metrics_by_revenue = campaign_metrics.sort_values('revenue', ascending=False)
-            st.subheader("Average Revenue by Campaign Type")
-            fig, ax = plt.subplots(figsize=(10, 5))
-            sns.barplot(x='type', y='revenue', data=campaign_metrics_by_revenue, palette='viridis', ax=ax)
-            for i, v in enumerate(campaign_metrics_by_revenue['revenue']):
-                ax.text(i, v + 0.01, f'{v:,.2f}', ha='center')
-            ax.set_title('Average Revenue by Campaign Type')
-            ax.set_xlabel('Campaign Type')
-            ax.set_ylabel('Average Revenue')
-            st.pyplot(fig)
-            st.info("Revenue is homogeneous across most campaign types, with the exception of 'event', which is significantly lower. "
-    "Most types achieve average revenues between $450,000 and $480,000. "
-    "This suggests that, except for events, all campaign types are capable of generating substantial revenue, providing flexibility in campaign planning.")
 
-            # Conversion rate by type (bar)
-            campaign_metrics_by_conv = campaign_metrics.sort_values('conversion_rate', ascending=False)
-            st.subheader("Average Conversion Rate by Campaign Type")
-            fig, ax = plt.subplots(figsize=(10, 5))
-            sns.barplot(x='type', y='conversion_rate', data=campaign_metrics_by_conv, palette='viridis', ax=ax)
-            for i, v in enumerate(campaign_metrics_by_conv['conversion_rate']):
-                ax.text(i, v + 0.01, f'{v:.2f}', ha='center')
-            ax.set_title('Average Conversion Rate by Campaign Type')
-            ax.set_xlabel('Campaign Type')
-            ax.set_ylabel('Conversion Rate')
-            st.pyplot(fig)
-            st.info("Conversion rates are also homogeneous, ranging from 0.52 to 0.55 across most types. "
-    "This indicates that the probability of converting leads is stable regardless of campaign type, with no type showing a clear advantage in conversion efficiency.")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("Average Revenue by Campaign Type")
+                fig = px.bar(
+                    campaign_metrics_by_revenue,
+                    x='type',
+                    y='revenue',
+                    color='type',
+                    hover_data={
+                        'revenue': ':.2f',
+                        'conversion_rate': ':.2f',
+                        'calculated_roi': ':.2f',
+                        'net_profit': ':.2f',
+                        'count': True
+                    },
+                    title='Average Revenue by Campaign Type',
+                    labels={'type': 'Campaign Type', 'revenue': 'Average Revenue'}
+                )
+                fig.update_layout(showlegend=False, xaxis_title='Campaign Type', yaxis_title='Average Revenue', height=500)
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("Revenue is homogeneous across most campaign types, with the exception of 'event', which is significantly lower. "
+        "Most types achieve average revenues between $450,000 and $480,000. "
+        "This suggests that, except for events, all campaign types are capable of generating substantial revenue, providing flexibility in campaign planning.")
+                
+            with col2:
+                # Conversion rate by type (bar)
+                campaign_metrics_by_conv = campaign_metrics.sort_values('conversion_rate', ascending=False)
+                st.subheader("Average Conversion Rate by Campaign Type")
+                fig = px.bar(
+                    campaign_metrics_by_conv,
+                    x='type',
+                    y='conversion_rate',
+                    color='type',
+                    color_discrete_sequence=px.colors.qualitative.Vivid,  # Paleta moderna y vibrante
+                    hover_data={
+                        'conversion_rate': ':.2f',
+                        'revenue': ':.2f',
+                        'calculated_roi': ':.2f',
+                        'net_profit': ':.2f',
+                        'count': True
+                    },
+                    title='Average Conversion Rate by Campaign Type',
+                    labels={'type': 'Campaign Type', 'conversion_rate': 'Average Conversion Rate'}
+                )
+                fig.update_layout(
+                    showlegend=False,
+                    xaxis_title='Campaign Type',
+                    yaxis_title='Average Conversion Rate',
+                    height=500
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("Conversion rates are also homogeneous, ranging from 0.52 to 0.55 across most types. "
+        "This indicates that the probability of converting leads is stable regardless of campaign type, with no type showing a clear advantage in conversion efficiency.")
 
             # Revenue vs Conversion scatter
-            st.subheader("Revenue vs Conversion Rate by Campaign Type")
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.scatterplot(x='conversion_rate', y='revenue', size='count', sizes=(100, 500), hue='calculated_roi', data=campaign_metrics, palette='viridis', ax=ax)
-            for i, row in campaign_metrics.iterrows():
-                ax.text(row['conversion_rate']+0.02, row['revenue'], row['type'], fontsize=11)
-            ax.set_title('Revenue vs Conversion Rate by Campaign Type')
-            ax.set_xlabel('Conversion Rate')
-            ax.set_ylabel('Average Revenue')
-            st.pyplot(fig)
-            st.info("'Podcast' campaigns achieve the highest average revenue, despite having a similar conversion rate to other types. "
-    "'Social media' stands out with the highest average ROI (most intense color), while 'event' campaigns are the lowest in both revenue and conversion. "
-    "The size of the circles shows that 'social media' and 'email' are the most common types. "
-    "Overall, the distribution is homogeneous, but small differences may indicate specific optimization opportunities.")
+            #st.subheader("Revenue vs Conversion Rate by Campaign Type")
+            #fig, ax = plt.subplots(figsize=(10, 6))
+            #sns.scatterplot(x='conversion_rate', y='revenue', size='count', sizes=(100, 500), hue='calculated_roi', data=campaign_metrics, palette='viridis', ax=ax)
+            #for i, row in campaign_metrics.iterrows():
+            #    ax.text(row['conversion_rate']+0.02, row['revenue'], row['type'], fontsize=11)
+            #ax.set_title('Revenue vs Conversion Rate by Campaign Type')
+            #ax.set_xlabel('Conversion Rate')
+            #ax.set_ylabel('Average Revenue')
+            #st.pyplot(fig)
+            #st.info("'Podcast' campaigns achieve the highest average revenue, despite having a similar conversion rate to other types. "
+    #"'Social media' stands out with the highest average ROI (most intense color), while 'event' campaigns are the lowest in both revenue and conversion. "
+    #"The size of the circles shows that 'social media' and 'email' are the most common types. "
+    #"Overall, the distribution is homogeneous, but small differences may indicate specific optimization opportunities.")
 
             # Key metrics table
             st.subheader("Key Metrics by Campaign Type")
             st.dataframe(campaign_metrics, use_container_width=True)
 
-            # Net profit by type (bar)
-            campaign_metrics_by_profit = campaign_metrics.sort_values('net_profit', ascending=False)
-            st.subheader("Average Net Profit by Campaign Type")
-            fig, ax = plt.subplots(figsize=(10, 5))
-            sns.barplot(x='type', y='net_profit', data=campaign_metrics_by_profit, palette='viridis', ax=ax)
-            for i, v in enumerate(campaign_metrics_by_profit['net_profit']):
-                ax.text(i, v, f'{v:,.2f}', ha='center', va='bottom', fontsize=12)
-            ax.set_title('Average Net Profit by Campaign Type')
-            ax.set_xlabel('Campaign Type')
-            ax.set_ylabel('Net Profit')
-            st.pyplot(fig)
-            st.info("'Social media', 'email', and 'podcast' types are the most homogeneous and profitable in terms of net profit. "
-    "'Webinar' is slightly below, while 'event' is much lower, making it the least profitable option.")
+            col1, col2 = st.columns(2)
+            with col1:
+                # Net profit by type (interactive bar chart con filtros y media general)
+                st.subheader("Average Net Profit by Campaign Type")
 
-            # ROI vs Net Profit scatter
-            campaign_metrics_filtered = campaign_metrics[campaign_metrics['type'] != 'event']
-            st.subheader("ROI vs Net Profit by Campaign Type")
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.scatterplot(x='calculated_roi', y='net_profit', size='count', sizes=(100, 500), hue='type', data=campaign_metrics_filtered, palette='viridis', ax=ax)
-            ax.set_title('ROI vs Net Profit by Campaign Type')
-            ax.set_xlabel('Average ROI')
-            ax.set_ylabel('Average Net Profit')
-            st.pyplot(fig)
-            st.info("The top three campaign types show a homogeneous distribution in both ROI and net profit, confirming their consistency and reliability. "
-    "This highlights the strategic value of focusing on these types for sustained profitability.")
+                if 'campaign_metrics_by_profit' not in locals():
+                    campaign_metrics_by_profit = campaign_metrics.sort_values('net_profit', ascending=False)
 
-            # Efficiency: profit per dollar
-            campaign_metrics['budget'] = filtered_df.groupby('type')['budget'].mean().reset_index()['budget']
-            campaign_metrics['profit_per_dollar'] = campaign_metrics['net_profit'] / campaign_metrics['budget']
-            campaign_metrics_by_efficiency = campaign_metrics.sort_values('profit_per_dollar', ascending=False)
-            st.subheader("Net Profit per Dollar Invested by Campaign Type")
-            fig, ax = plt.subplots(figsize=(10, 5))
-            sns.barplot(x='type', y='profit_per_dollar', data=campaign_metrics_by_efficiency, palette='viridis', ax=ax)
-            for i, v in enumerate(campaign_metrics_by_efficiency['profit_per_dollar']):
-                ax.text(i, v, f'{v:,.2f}', ha='center', va='bottom', fontsize=12)
-            ax.set_title('Net Profit per Dollar Invested by Campaign Type')
-            ax.set_xlabel('Campaign Type')
-            ax.set_ylabel('Net Profit per Dollar')
-            st.pyplot(fig)
-            st.info("'Social media' campaigns generate the highest net profit per dollar invested (7.55), followed by 'email' (7.17) and 'podcast' (7.10). "
-    "'Webinar' is lower (6.81), and 'event' is the least efficient (1.40). "
-    "This metric reinforces the recommendation to prioritize social media and email campaigns for maximum efficiency.")
+                # Filtro dinámico de tipos de campaña
+                campaign_types = campaign_metrics_by_profit['type'].unique().tolist()
+                selected_types = st.multiselect(
+                    "Filter by Campaign Type",
+                    options=campaign_types,
+                    default=campaign_types,
+                    key="net_profit_type_filter"
+                )
+                filtered_profit = campaign_metrics_by_profit[campaign_metrics_by_profit['type'].isin(selected_types)]
+
+                # Cálculo de la media general
+                overall_mean = campaign_metrics_by_profit['net_profit'].mean()
+
+                fig = px.bar(
+                    filtered_profit,
+                    x='type',
+                    y='net_profit',
+                    color='type',
+                    color_discrete_sequence=px.colors.qualitative.Vivid,
+                    hover_data={
+                        'net_profit': ':.2f',
+                        'revenue': ':.2f',
+                        'conversion_rate': ':.2f',
+                        'calculated_roi': ':.2f',
+                        'count': True
+                    },
+                    text='net_profit',
+                    title='Average Net Profit by Campaign Type',
+                    labels={'type': 'Campaign Type', 'net_profit': 'Average Net Profit'}
+                )
+                fig.update_traces(
+                    texttemplate='%{text:,.0f}',
+                    textposition='outside',
+                    marker_line_width=1.5,
+                    marker_line_color='black'
+                )
+                # Línea de media general
+                fig.add_hline(
+                    y=overall_mean,
+                    line_dash="dash",
+                    line_color="gray",
+                    annotation_text=f"Overall Mean: {overall_mean:,.0f}",
+                    annotation_position="top left"
+                )
+                fig.update_layout(
+                    showlegend=False,
+                    xaxis_title='Campaign Type',
+                    yaxis_title='Average Net Profit',
+                    height=500,
+                    uniformtext_minsize=8,
+                    uniformtext_mode='hide'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("'Social media', 'email', and 'podcast' types are the most homogeneous and profitable in terms of net profit. "
+        "'Webinar' is slightly below, while 'event' is much lower, making it the least profitable option.")
+
+            
+                # ROI vs Net Profit scatter
+                #campaign_metrics_filtered = campaign_metrics[campaign_metrics['type'] != 'event']
+                #st.subheader("ROI vs Net Profit by Campaign Type")
+                #fig, ax = plt.subplots(figsize=(10, 6))
+                #sns.scatterplot(x='calculated_roi', y='net_profit', size='count', sizes=(100, 500), hue='type', data=campaign_metrics_filtered, palette='viridis', ax=ax)
+                #ax.set_title('ROI vs Net Profit by Campaign Type')
+                #ax.set_xlabel('Average ROI')
+                #ax.set_ylabel('Average Net Profit')
+                #st.pyplot(fig)
+                #st.info("The top three campaign types show a homogeneous distribution in both ROI and net profit, confirming their consistency and reliability. "
+        #"This highlights the strategic value of focusing on these types for sustained profitability.")
+
+            with col2:
+                # Efficiency: profit per dollar
+                campaign_metrics['budget'] = filtered_df.groupby('type')['budget'].mean().reset_index()['budget']
+                campaign_metrics['profit_per_dollar'] = campaign_metrics['net_profit'] / campaign_metrics['budget']
+                campaign_metrics_by_efficiency = campaign_metrics.sort_values('profit_per_dollar', ascending=False)
+                st.subheader("Net Profit per Dollar Invested by Campaign Type")
+                fig, ax = plt.subplots(figsize=(15,7))
+                sns.barplot(x='type', y='profit_per_dollar', data=campaign_metrics_by_efficiency, palette='viridis', ax=ax)
+                for i, v in enumerate(campaign_metrics_by_efficiency['profit_per_dollar']):
+                    ax.text(i, v, f'{v:,.2f}', ha='center', va='bottom', fontsize=12)
+                ax.set_title('Net Profit per Dollar Invested by Campaign Type')
+                ax.set_xlabel('Campaign Type')
+                ax.set_ylabel('Net Profit per Dollar')
+                st.pyplot(fig)
+                st.info("'Social media' campaigns generate the highest net profit per dollar invested (7.55), followed by 'email' (7.17) and 'podcast' (7.10). "
+        "'Webinar' is lower (6.81), and 'event' is the least efficient (1.40). "
+        "This metric reinforces the recommendation to prioritize social media and email campaigns for maximum efficiency.")
 
             # Complete metrics table
             st.subheader("Complete Metrics by Campaign Type")
             metrics_columns = ['type', 'count', 'budget', 'revenue', 'net_profit', 'calculated_roi', 'conversion_rate', 'profit_per_dollar']
             st.dataframe(campaign_metrics[metrics_columns], use_container_width=True)
 
-            # Correlation heatmap
-            st.subheader("Correlation between Key Metrics")
-            correlation = campaign_metrics[['budget', 'revenue', 'net_profit', 'calculated_roi', 'conversion_rate', 'profit_per_dollar']].corr()
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sns.heatmap(correlation, annot=True, cmap='viridis', fmt='.2f', ax=ax)
-            ax.set_title('Correlation between Financial and Performance Metrics')
-            st.pyplot(fig)
-            st.info("Net profit is highly correlated with revenue, and profit per dollar is strongly correlated with calculated ROI. "
-    "These relationships provide valuable insights for optimizing budget allocation and maximizing marketing performance.")
+            col1, col2 = st.columns(2)
+            with col1:
+                # Correlation heatmap (interactive Plotly)
+                st.subheader("Correlation between Key Metrics")
+                metrics = ['budget', 'revenue', 'net_profit', 'calculated_roi', 'conversion_rate', 'profit_per_dollar']
+                correlation = campaign_metrics[metrics].corr()
+
+                
+
+                fig = ff.create_annotated_heatmap(
+                    z=correlation.values.round(2),
+                    x=list(correlation.columns),
+                    y=list(correlation.index),
+                    colorscale='Viridis',
+                    showscale=True,
+                    annotation_text=correlation.round(2).astype(str).values
+                )
+                fig.update_layout(
+                    title='Correlation between Financial and Performance Metrics',
+                    xaxis_title="Metric",
+                    yaxis_title="Metric",
+                    width=800,
+                    height=500
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("Net profit is highly correlated with revenue, and profit per dollar is strongly correlated with calculated ROI. "
+        "These relationships provide valuable insights for optimizing budget allocation and maximizing marketing performance.")
 
             # Conclusions
             st.markdown("""
@@ -412,54 +649,356 @@ try:
             st.header("ROI Analysis in Marketing Campaigns")
             st.markdown("**This section explores the distribution and drivers of ROI.**")
 
-            # ROI distribution (histogram, boxplot, QQ plot)
+            # ROI distribution (histogram, boxplot, QQ plot) - versión interactiva y moderna
             st.subheader("ROI Distribution")
-            fig, axs = plt.subplots(2, 2, figsize=(14, 10))
-            sns.histplot(filtered_df['calculated_roi'], kde=True, bins=30, ax=axs[0, 0])
-            axs[0, 0].set_title('ROI Distribution')
-            sns.boxplot(y=filtered_df['calculated_roi'], ax=axs[0, 1])
-            axs[0, 1].set_title('ROI Boxplot')
-            stats.probplot(filtered_df['calculated_roi'], dist="norm", plot=axs[1, 0])
-            axs[1, 0].set_title('ROI Q-Q Plot')
-            axs[1, 1].axis('off')
-            plt.tight_layout()
-            st.pyplot(fig)
-            st.info("ROI is right-skewed with a high mean (approx. 849), but with considerable dispersion and several high-value outliers. "
-    "The distribution is not normal (confirmed by the Q-Q plot), and most campaigns achieve moderate ROI, with a few achieving exceptionally high returns. "
-    "This suggests that while most campaigns perform within a predictable range, there are rare cases of outstanding performance that can significantly impact overall results. "
-    "Segmenting campaigns by ROI reveals clear groups of high, medium, and low performers, highlighting the importance of identifying and replicating the factors behind top-performing campaigns.")
+
+            # Selección de métrica para explorar
+            roi_metric = st.selectbox(
+                "Select metric to analyze",
+                options=[
+                    ("ROI", "calculated_roi"),
+                    ("Net Profit", "net_profit"),
+                    ("Revenue", "revenue"),
+                    ("Conversion Rate", "conversion_rate")
+                ],
+                format_func=lambda x: x[0],
+                index=0,
+                key="roi_dist_metric"
+            )[1]
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Histograma interactivo
+                fig_hist = px.histogram(
+                    filtered_df,
+                    x=roi_metric,
+                    nbins=30,
+                    color_discrete_sequence=["#636EFA"],
+                    marginal="box",
+                    opacity=0.85,
+                    title=f"Distribution of {roi_metric.replace('_', ' ').title()}",
+                    hover_data=filtered_df.columns
+                )
+                fig_hist.update_layout(
+                    bargap=0.05,
+                    xaxis_title=roi_metric.replace('_', ' ').title(),
+                    yaxis_title="Count",
+                    template="plotly_white",
+                    height=400
+                )
+                st.plotly_chart(fig_hist, use_container_width=True)
+
+            with col2:
+                # Boxplot interactivo
+                fig_box = px.box(
+                    filtered_df,
+                    y=roi_metric,
+                    color_discrete_sequence=["#00CC96"],
+                    points="all",
+                    title=f"{roi_metric.replace('_', ' ').title()} Boxplot",
+                    hover_data=filtered_df.columns
+                )
+                fig_box.update_traces(quartilemethod="exclusive")
+                fig_box.update_layout(
+                    yaxis_title=roi_metric.replace('_', ' ').title(),
+                    template="plotly_white",
+                    height=400
+                )
+                st.plotly_chart(fig_box, use_container_width=True)
+            
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Q-Q Plot estilizado con fondo negro
+                st.subheader(f"Interactive Q-Q Plot: {roi_metric.replace('_', ' ').title()}")
+
+                # Calcular Q-Q plot con línea ajustada
+                data = filtered_df[roi_metric].dropna()
+                (osm, osr), (slope, intercept, _) = stats.probplot(data, dist="norm", fit=True)
+
+                # Calcular puntos de la línea real de ajuste
+                line_y = slope * osm + intercept
+
+                fig = go.Figure()
+
+                # Puntos de datos
+                fig.add_trace(go.Scatter(
+                    x=osm,
+                    y=osr,
+                    mode='markers',
+                    name='Data Points',
+                    marker=dict(color='orange', size=7),
+                    hovertemplate='Theoretical: %{x:.2f}<br>Sample: %{y:.2f}<extra></extra>'
+                ))
+
+                # Línea de ajuste verdadera
+                fig.add_trace(go.Scatter(
+                    x=osm,
+                    y=line_y,
+                    mode='lines',
+                    name='Fit Line',
+                    line=dict(color='cyan', dash='dash'),
+                    hoverinfo='skip'
+                ))
+
+                fig.update_layout(
+                    template='plotly_dark',
+                    title=f"Q-Q Plot of {roi_metric.replace('_', ' ').title()}",
+                    xaxis_title="Theoretical Quantiles",
+                    yaxis_title="Sample Quantiles",
+                    height=500,
+                    legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("ROI is right-skewed with a high mean (approx. 849), but with considerable dispersion and several high-value outliers. "
+        "The distribution is not normal (confirmed by the Q-Q plot), and most campaigns achieve moderate ROI, with a few achieving exceptionally high returns. "
+        "This suggests that while most campaigns perform within a predictable range, there are rare cases of outstanding performance that can significantly impact overall results. "
+        "Segmenting campaigns by ROI reveals clear groups of high, medium, and low performers, highlighting the importance of identifying and replicating the factors behind top-performing campaigns.")
 
             # ROI by main categories (boxplots)
             st.subheader("ROI by Main Categories")
-            fig, axs = plt.subplots(2, 2, figsize=(16, 12))
-            sns.boxplot(x='channel', y='calculated_roi', data=filtered_df, palette='viridis', showfliers=False, ax=axs[0, 0])
-            axs[0, 0].set_title('ROI by Channel')
-            sns.boxplot(x='type', y='calculated_roi', data=filtered_df, palette='Set1', showfliers=False, ax=axs[0, 1])
-            axs[0, 1].set_title('ROI by Campaign Type')
-            sns.boxplot(x='target_audience', y='calculated_roi', data=filtered_df, palette='Set2', showfliers=False, ax=axs[1, 0])
-            axs[1, 0].set_title('ROI by Target Audience')
-            sns.boxplot(x='budget', y='calculated_roi', data=filtered_df, palette='Set3', showfliers=False, ax=axs[1, 1])
-            axs[1, 1].set_title('ROI by Budget')
-            plt.tight_layout()
-            st.pyplot(fig)
+
+            # ROI by Channel (Plotly)
+            fig_channel = px.box(
+                filtered_df,
+                x='channel',
+                y='calculated_roi',
+                color='channel',
+                points="all",
+                color_discrete_sequence=px.colors.qualitative.Vivid,
+                title="ROI by Channel",
+                hover_data=filtered_df.columns
+            )
+            fig_channel.update_traces(quartilemethod="exclusive")
+            fig_channel.update_layout(
+                xaxis_title="Channel",
+                yaxis_title="ROI",
+                boxmode="group",
+                height=400,
+                showlegend=False
+            )
+
+            # ROI by Campaign Type (Plotly)
+            fig_type = px.box(
+                filtered_df,
+                x='type',
+                y='calculated_roi',
+                color='type',
+                points="all",
+                color_discrete_sequence=px.colors.qualitative.Pastel,
+                title="ROI by Campaign Type",
+                hover_data=filtered_df.columns
+            )
+            fig_type.update_traces(quartilemethod="exclusive")
+            fig_type.update_layout(
+                xaxis_title="Campaign Type",
+                yaxis_title="ROI",
+                boxmode="group",
+                height=400,
+                showlegend=False
+            )
+
+            # ROI by Target Audience (Plotly)
+            fig_audience = px.box(
+                filtered_df,
+                x='target_audience',
+                y='calculated_roi',
+                color='target_audience',
+                points="all",
+                color_discrete_sequence=px.colors.qualitative.Set2,
+                title="ROI by Target Audience",
+                hover_data=filtered_df.columns
+            )
+            fig_audience.update_traces(quartilemethod="exclusive")
+            fig_audience.update_layout(
+                xaxis_title="Target Audience",
+                yaxis_title="ROI",
+                boxmode="group",
+                height=400,
+                showlegend=False
+            )
+
+            # ROI by Budget Quartile (Plotly)
+            filtered_df['budget_quartile'] = pd.qcut(filtered_df['budget'], 4, labels=['Low', 'Mid-Low', 'Mid-High', 'High'])
+            fig_budget = px.box(
+                filtered_df,
+                x='budget_quartile',
+                y='calculated_roi',
+                color='budget_quartile',
+                points="all",
+                color_discrete_sequence=px.colors.qualitative.Prism,
+                title="ROI by Budget Quartile",
+                hover_data=filtered_df.columns
+            )
+            fig_budget.update_traces(quartilemethod="exclusive")
+            fig_budget.update_layout(
+                xaxis_title="Budget Quartile",
+                yaxis_title="ROI",
+                boxmode="group",
+                height=400,
+                showlegend=False
+            )
+
+            # Mostrar los 4 gráficos en una cuadrícula dinámica
+            col1, col2 = st.columns(2)
+            with col1:
+                st.plotly_chart(fig_channel, use_container_width=True)
+                st.plotly_chart(fig_audience, use_container_width=True)
+            with col2:
+                st.plotly_chart(fig_type, use_container_width=True)
+                st.plotly_chart(fig_budget, use_container_width=True)
             st.info("ROI is distributed homogeneously across channels, with 'paid' showing the highest mean and lowest variability. "
     "'Social media', 'email', and 'podcast' campaign types are the most consistent and profitable, while 'event' is excluded due to poor performance. "
     "No substantial differences are observed between B2B and B2C audiences, but B2C shows slightly higher variability. "
     "There is a slight inverse relationship between budget and ROI: lower and mid-range budgets tend to achieve higher ROI, while very high budgets show lower efficiency. "
-    "These patterns suggest that focusing on efficient channels and campaign types, and optimizing budget allocation, can maximize ROI.")
+    "These patterns suggest that focusing on efficient channels and campaign types, and optimizing budget allocation, can maximize ROI."
+    "calculated_roi mediana por Canal:"
+    "channel"
+    "paid        856.77"
+    "organic     807.50"
+    "referral    772.62"
+    "promotion   689.32"
 
-            # Correlation heatmap (ROI vs numeric variables)
-            st.subheader("Correlation between ROI and Numeric Variables")
-            numeric_cols = ['calculated_roi', 'budget', 'conversion_rate', 'revenue', 'net_profit', 'campaign_duration', 'cost_per_conversion', 'profit_margin']
-            correlation = filtered_df[numeric_cols].corr()
-            fig, ax = plt.subplots(figsize=(10, 8))
-            sns.heatmap(correlation, annot=True, cmap='coolwarm', fmt='.2f', linewidths=0.5, vmin=-1, vmax=1, ax=ax)
-            ax.set_title('Correlation between ROI and Numeric Variables')
-            st.pyplot(fig)
-            st.info("ROI is highly positively correlated with net profit (r ≈ 0.71) and profit margin, and negatively correlated with cost per conversion (-0.24) and budget (-0.47). "
-    "This means that maximizing profit margin and reducing cost per conversion are key to improving ROI, while simply increasing budget does not guarantee better results. "
-    "Conversion rate has a weak but positive correlation with ROI, indicating that improving conversion can have a tangible, though not linear, impact on returns. "
-    "These insights support a strategy focused on operational efficiency and targeted investment rather than increasing spend indiscriminately.")
+    "calculated_roi mediana por Tipo de Campaña:"
+    "type"
+    "email          826.79"
+    "social media   794.50"
+    "podcast        771.54"
+    "webinar        739.42"
+
+    "calculated_roi mediana por Audiencia Objetivo:"
+    "target_audience"
+    "B2B   780.18"
+    "B2C   771.68"
+
+    "calculated_roi mediana por Categoría de Presupuesto:"
+    "budget_category"
+    "low budget      1,958.49"
+    "medium budget   1,248.13"
+    "high budget       562.75")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                # Correlation heatmap (ROI vs numeric variables)
+                st.subheader("Correlation between ROI and Numeric Variables")
+                numeric_cols = [
+                    'calculated_roi', 'budget', 'conversion_rate', 'revenue',
+                    'net_profit', 'campaign_duration', 'cost_per_conversion', 'profit_margin'
+                ]
+                # Asegura que todas las columnas existen y son numéricas
+                available_cols = [col for col in numeric_cols if col in filtered_df.columns and pd.api.types.is_numeric_dtype(filtered_df[col])]
+                correlation = filtered_df[available_cols].corr()
+
+                fig = ff.create_annotated_heatmap(
+                    z=correlation.values.round(2),
+                    x=list(correlation.columns),
+                    y=list(correlation.index),
+                    colorscale='Viridis',
+                    showscale=True,
+                    annotation_text=correlation.round(2).astype(str).values
+                )
+                fig.update_layout(
+                    title='Correlation between ROI and Numeric Variables',
+                    xaxis_title="Metric",
+                    yaxis_title="Metric",
+                    width=800,
+                    height=500,
+                    title_x=0.5
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Selecciona las 3 variables más correlacionadas con ROI (excluyendo la propia)
+                corr_roi = correlation['calculated_roi'].drop('calculated_roi', errors='ignore')
+                most_correlated = corr_roi.abs().sort_values(ascending=False).head(3).index.tolist()
+
+                # Scatterplots modernos con fondo negro y hover interactivo
+                st.subheader("ROI vs Most Correlated Variables")
+                color_palettes = [px.colors.qualitative.Vivid, px.colors.qualitative.Pastel, px.colors.qualitative.Dark24]
+                for i, column in enumerate(most_correlated):
+                    # Asigna un color diferente a cada scatter usando una columna categórica si existe, si no, usa un color único
+                    color_col = None
+                    if 'type' in filtered_df.columns:
+                        color_col = 'type'
+                        color_seq = color_palettes[i % len(color_palettes)]
+                    elif 'channel' in filtered_df.columns:
+                        color_col = 'channel'
+                        color_seq = color_palettes[i % len(color_palettes)]
+                    else:
+                        color_seq = [px.colors.qualitative.Vivid[i % len(px.colors.qualitative.Vivid)]]
+
+                    fig_scatter = px.scatter(
+                        filtered_df,
+                        x=column,
+                        y='calculated_roi',
+                        color=color_col,
+                        color_discrete_sequence=color_seq,
+                        trendline='ols',
+                        template='plotly_dark',
+                        title=f'calculated_roi vs {column}',
+                        labels={column: column, 'calculated_roi': 'ROI'},
+                        hover_data=filtered_df.columns
+                    )
+                    fig_scatter.update_traces(marker=dict(size=8, line=dict(width=1, color='black')))
+                    st.plotly_chart(fig_scatter, use_container_width=True)
+                st.info("ROI is highly positively correlated with net profit (r ≈ 0.71) and profit margin, and negatively correlated with cost per conversion (-0.24) and budget (-0.47). "
+        "This means that maximizing profit margin and reducing cost per conversion are key to improving ROI, while simply increasing budget does not guarantee better results. "
+        "Conversion rate has a weak but positive correlation with ROI, indicating that improving conversion can have a tangible, though not linear, impact on returns. "
+        "These insights support a strategy focused on operational efficiency and targeted investment rather than increasing spend indiscriminately.")
+
+            # Analizamos las mejores combinaciones de canal y tipo
+            st.subheader("Top 10 Channel & Campaign Type Combinations by ROI")
+
+            # Filtros interactivos para canal y tipo
+            channels = df['channel'].unique().tolist()
+            types = df['type'].unique().tolist()
+            selected_channels = st.multiselect("Filter Channels", options=channels, default=channels, key="top_combos_channels")
+            selected_types = st.multiselect("Filter Campaign Types", options=types, default=types, key="top_combos_types")
+
+            # Agrupa y filtra según selección
+            channel_type_calculated_roi = df.groupby(['channel', 'type'])['calculated_roi'].mean().reset_index()
+            channel_type_calculated_roi = channel_type_calculated_roi[
+                channel_type_calculated_roi['channel'].isin(selected_channels) &
+                channel_type_calculated_roi['type'].isin(selected_types)
+            ]
+            channel_type_calculated_roi = channel_type_calculated_roi.sort_values('calculated_roi', ascending=False)
+            top_combinations = channel_type_calculated_roi.head(10)
+
+            # Gráfico interactivo con Plotly
+            fig = px.bar(
+                top_combinations,
+                x='calculated_roi',
+                y='channel',
+                color='type',
+                orientation='h',
+                color_discrete_sequence=px.colors.qualitative.Pastel2,
+                hover_data={
+                    'channel': True,
+                    'type': True,
+                    'calculated_roi': ':.2f'
+                },
+                title='Top 10 Channel & Campaign Type Combinations by Average ROI'
+            )
+            fig.update_layout(
+                template='plotly_dark',
+                xaxis_title='Average ROI',
+                yaxis_title='Channel',
+                legend_title='Campaign Type',
+                height=480,
+                margin=dict(l=30, r=30, t=60, b=40)
+            )
+            fig.update_traces(marker_line_width=1.5, marker_line_color='black')
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.dataframe(top_combinations, use_container_width=True)
+
+            st.info(
+                "This chart displays the top 10 channel and campaign type combinations by average ROI. "
+                "Social media and paid channels are consistently among the most efficient, while organic and email also appear in the top combinations. "
+                "Use the filters above to explore how different channels and campaign types perform. "
+                "Focusing on these high-performing combinations can help maximize marketing efficiency and returns."
+            )
 
             # Conclusions
             st.markdown("""
@@ -474,65 +1013,183 @@ try:
             st.header("Comparative Analysis: B2B vs B2C")
             st.markdown("**This section compares key metrics between B2B and B2C audiences.**")
 
-            # Conversion rate boxplot
-            st.subheader("Conversion Rate: B2B vs B2C")
-            filtered_audience = filtered_df[filtered_df['target_audience'].isin(['B2B', 'B2C'])]
-            fig, ax = plt.subplots(figsize=(8, 5))
-            sns.boxplot(x='target_audience', y='conversion_rate', data=filtered_audience, showfliers=False, ax=ax)
-            ax.set_title('Conversion Rate: B2B vs B2C')
-            st.pyplot(fig)
-            st.info("Conversion rates are nearly identical for B2B and B2C, with both segments showing a mean around 0.54 and virtually overlapping distributions. "
-    "Statistical tests (t-test, p-value ≈ 0.94) confirm there is no significant difference between the two audiences. "
-    "This suggests that audience type alone does not determine conversion success, and any observed differences are likely due to random variation.")
-
             # Key metrics by audience (boxplots)
             st.subheader("Key Metrics by Audience")
-            metrics = ['calculated_roi', 'conversion_rate', 'profit_margin', 'revenue', 'budget', 'cost_per_conversion']
-            fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-            axes = axes.flatten()
-            for i, metric in enumerate(metrics):
-                sns.boxplot(x='target_audience', y=metric, data=filtered_audience, ax=axes[i], showfliers=False, palette='viridis')
-                axes[i].set_title(f'{metric} Comparison')
-            plt.tight_layout()
-            st.pyplot(fig)
+
+            filtered_audience = filtered_df[filtered_df['target_audience'].isin(['B2B', 'B2C'])]
+            metrics = [
+                ('ROI', 'calculated_roi'),
+                ('Conversion Rate', 'conversion_rate'),
+                ('Profit Margin', 'profit_margin'),
+                ('Revenue', 'revenue'),
+                ('Budget', 'budget'),
+                ('Cost per Conversion', 'cost_per_conversion')
+            ]
+
+            # Mostrar los boxplots en una cuadrícula moderna con Plotly y fondo negro
+            col1, col2, col3 = st.columns(3)
+            for i, (label, metric) in enumerate(metrics):
+                fig = px.box(
+                    filtered_audience,
+                    x='target_audience',
+                    y=metric,
+                    color='target_audience',
+                    color_discrete_sequence=px.colors.qualitative.Dark24,
+                    points="all",
+                    title=f"{label}: B2B vs B2C",
+                    hover_data=filtered_audience.columns
+                )
+                fig.update_traces(quartilemethod="exclusive")
+                fig.update_layout(
+                    template="plotly_dark",
+                    xaxis_title="Audience",
+                    yaxis_title=label,
+                    showlegend=False,
+                    height=350,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                if i < 3:
+                    with col1:
+                        st.plotly_chart(fig, use_container_width=True)
+                elif i < 5:
+                    with col2:
+                        st.plotly_chart(fig, use_container_width=True)
+                else:
+                    with col3:
+                        st.plotly_chart(fig, use_container_width=True)
             st.info("All key metrics are highly similar between B2B and B2C, except for profit margin, which is about 27% higher for B2C. "
     "Cost per conversion is slightly higher for B2C, possibly explaining the higher profit margin. "
     "Overall, both segments have comparable ROI, conversion rate, revenue, and budget, with overlapping interquartile ranges and similar variability.")
 
-            # Conversion rate by channel and audience (bar)
-            st.subheader("Conversion Rate by Channel and Audience")
-            channel_conversion = filtered_df.groupby(['target_audience', 'channel'])['conversion_rate'].mean().reset_index()
-            fig, ax = plt.subplots(figsize=(12, 6))
-            sns.barplot(x='channel', y='conversion_rate', hue='target_audience', data=channel_conversion, ax=ax)
-            ax.set_title('Conversion Rate by Channel and Audience')
-            st.pyplot(fig)
-            st.info("B2C outperforms B2B in the paid channel (0.61 vs 0.53), while B2B leads in organic (0.57 vs 0.52) and email. "
-    "Promotion and referral channels show minimal differences between audiences. "
-    "These results highlight that channel-audience combinations can influence conversion, even if overall averages are similar.")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("Conversion Rate by Channel and Audience")
+                channel_conversion = filtered_df.groupby(['target_audience', 'channel'])['conversion_rate'].mean().reset_index()
+                fig = px.bar(
+                    channel_conversion,
+                    x='channel',
+                    y='conversion_rate',
+                    color='target_audience',
+                    barmode='group',
+                    text_auto='.2f',
+                    title='Conversion Rate by Channel and Audience',
+                    hover_data={
+                        'channel': True,
+                        'target_audience': True,
+                        'conversion_rate': ':.2f'
+                    }
+                )
+                fig.update_layout(
+                    template='plotly_dark',  # Fondo negro
+                    xaxis_title='Channel',
+                    yaxis_title='Conversion Rate',
+                    legend_title='Target Audience',
+                    height=500
+                )
+                fig.update_traces(
+                    marker_line_width=1.5,
+                    marker_line_color='black'
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
-            # Conversion rate by type and audience (bar)
-            st.subheader("Conversion Rate by Campaign Type and Audience")
-            type_conversion = filtered_df.groupby(['target_audience', 'type'])['conversion_rate'].mean().reset_index()
-            fig, ax = plt.subplots(figsize=(12, 6))
-            sns.barplot(x='type', y='conversion_rate', hue='target_audience', data=type_conversion, ax=ax)
-            ax.set_title('Conversion Rate by Campaign Type and Audience')
-            st.pyplot(fig)
-            st.info(" Social media campaigns have identical conversion rates for B2B and B2C (0.55). "
-    "B2C surprisingly outperforms B2B in webinars (0.58 vs 0.52), while B2B leads slightly in email. "
-    "Event campaigns are ineffective for both audiences, especially B2B. "
-    "These patterns suggest that campaign type can interact with audience to produce nuanced results.")
+            with col2:
+                # Conversion rate by type and audience (bar)
+                st.subheader("Conversion Rate by Campaign Type and Audience")
+                type_conversion = filtered_df.groupby(['target_audience', 'type'])['conversion_rate'].mean().reset_index()
+                fig = px.bar(
+                    type_conversion,
+                    x='type',
+                    y='conversion_rate',
+                    color='target_audience',
+                    barmode='group',
+                    text_auto='.2f',
+                    title='Conversion Rate by Campaign Type and Audience',
+                    color_discrete_sequence=px.colors.qualitative.Pastel2,  # Paleta moderna y diferente
+                    hover_data={
+                        'type': True,
+                        'target_audience': True,
+                        'conversion_rate': ':.2f'
+                    }
+                )
+                fig.update_layout(
+                    template='plotly_dark',  # Fondo negro
+                    xaxis_title='Campaign Type',
+                    yaxis_title='Conversion Rate',
+                    legend_title='Target Audience',
+                    height=500,
+                    bargap=0.25
+                )
+                fig.update_traces(
+                    marker_line_width=1.5,
+                    marker_line_color='black'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info(" Social media campaigns have identical conversion rates for B2B and B2C (0.55). "
+        "B2C surprisingly outperforms B2B in webinars (0.58 vs 0.52), while B2B leads slightly in email. "
+        "Event campaigns are ineffective for both audiences, especially B2B. "
+        "These patterns suggest that campaign type can interact with audience to produce nuanced results.")
 
-            # Heatmap: conversion by channel and audience
-            st.subheader("Conversion Rate Heatmap: Channel vs Audience")
-            heatmap_data = filtered_df.pivot_table(values='conversion_rate', index='channel', columns='target_audience', aggfunc='mean')
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sns.heatmap(heatmap_data, annot=True, cmap='viridis', fmt='.2f', linewidths=.5, ax=ax)
-            ax.set_title('Conversion Rate by Channel and Audience')
-            st.pyplot(fig)
-            st.info("he heatmap confirms natural specialization: B2B excels in organic channels, while B2C dominates paid. "
-    "Promotion and referral channels are less dependent on audience type. "
-    "These findings reinforce the importance of aligning channel strategy with audience characteristics for optimal conversion.")
+            col1, col2 = st.columns(2)
+            with col1:
+                # Conversion rate boxplot
+                st.subheader("Conversion Rate: B2B vs B2C")
+                # Adaptación: Boxplot interactivo con Plotly, fondo negro y colores modernos/diferentes
+                fig = px.box(
+                    filtered_audience,
+                    x='target_audience',
+                    y='conversion_rate',
+                    color='target_audience',
+                    color_discrete_sequence=px.colors.qualitative.Prism,  # Paleta moderna y diferente
+                    points="all",
+                    title="Conversion Rate: B2B vs B2C",
+                    hover_data=filtered_audience.columns
+                )
+                fig.update_traces(quartilemethod="exclusive")
+                fig.update_layout(
+                    template="plotly_dark",  # Fondo negro
+                    xaxis_title="Audience",
+                    yaxis_title="Conversion Rate",
+                    showlegend=False,
+                    height=400,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("Conversion rates are nearly identical for B2B and B2C, with both segments showing a mean around 0.54 and virtually overlapping distributions. "
+        "Statistical tests (t-test, p-value ≈ 0.94) confirm there is no significant difference between the two audiences. "
+        "This suggests that audience type alone does not determine conversion success, and any observed differences are likely due to random variation.")
 
+            with col2:
+                # Heatmap: conversion by channel and audience
+                # Heatmap: correlación entre ROI y variables numéricas, fondo negro, colores modernos
+                st.subheader("Correlation between ROI and Numeric Variables")
+                numeric_cols = [
+                    'calculated_roi', 'budget', 'conversion_rate', 'revenue',
+                    'net_profit', 'campaign_duration', 'cost_per_conversion', 'profit_margin'
+                ]
+                correlation = filtered_df[numeric_cols].corr()
+
+                fig = ff.create_annotated_heatmap(
+                    z=correlation.values.round(2),
+                    x=list(correlation.columns),
+                    y=list(correlation.index),
+                    colorscale='Cividis',  # Paleta moderna y diferente
+                    showscale=True,
+                    annotation_text=correlation.round(2).astype(str).values
+                )
+                fig.update_layout(
+                    title='Correlation between ROI and Numeric Variables',
+                    xaxis_title="Metric",
+                    yaxis_title="Metric",
+                    width=800,
+                    height=500,
+                    title_x=0.5,
+                    template='plotly_dark'  # Fondo negro
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("The heatmap confirms natural specialization: B2B excels in organic channels, while B2C dominates paid. "
+        "Promotion and referral channels are less dependent on audience type. "
+        "These findings reinforce the importance of aligning channel strategy with audience characteristics for optimal conversion.")
+           
             # Conclusions
             st.markdown("""
             **Conclusions:**  
@@ -556,41 +1213,103 @@ try:
     "Most are concentrated in the B2B segment and leverage channels such as email and organic, confirming their strategic value for profitability. "
     "Compared to the least profitable campaigns, top performers operate with lower budgets but generate much higher revenues, demonstrating exceptional ROI efficiency.")
 
-            # ROI vs Net Profit bar
-            st.subheader("ROI vs Net Profit")
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(x='campaign_name', y='calculated_roi', data=top_campaigns, palette='plasma', ax=ax)
-            ax.set_title('ROI of Top 10 Campaigns by Net Profit')
-            ax.set_ylabel('ROI')
-            ax.set_xlabel('Campaign Name')
-            ax.tick_params(axis='x', rotation=45)
-            st.pyplot(fig)
-            st.info("The top 10 campaigns by net profit also show high ROI, but there is not always a direct relationship: "
-    "some campaigns achieve outstanding ROI with moderate net profit, while others balance both metrics. "
-    "This highlights the importance of not only maximizing ROI but also ensuring substantial absolute returns.")
+            col1, col2 = st.columns(2)
+            with col1:
+                # ROI vs Net Profit bar
+                st.subheader("Correlation between ROI and Numeric Variables")
+                numeric_cols = [
+                    'calculated_roi', 'budget', 'conversion_rate', 'revenue',
+                    'net_profit', 'campaign_duration', 'cost_per_conversion', 'profit_margin'
+                ]
+                correlation = filtered_df[numeric_cols].corr().reset_index().melt(id_vars='index')
+                correlation.columns = ['Metric_X', 'Metric_Y', 'Correlation']
 
-            # Distribution of campaign types (pie)
-            st.subheader("Distribution of Campaign Types")
-            campaign_types = top_campaigns['type'].value_counts()
-            fig, ax = plt.subplots(figsize=(6, 6))
-            ax.pie(campaign_types, labels=campaign_types.index, autopct='%1.1f%%', startangle=90)
-            ax.set_title('Distribution of Successful Campaign Types')
-            st.pyplot(fig)
-            st.info("The most profitable campaigns are dominated by email and organic types, with social media and podcast also present. "
-    "This distribution suggests that while social media campaigns can be highly effective, email and organic strategies are more consistently represented among top performers. "
-    "Event campaigns are notably absent, confirming their lower profitability.")
+                fig = px.bar(
+                    correlation,
+                    x='Metric_X',
+                    y='Correlation',
+                    color='Metric_Y',
+                    barmode='group',
+                    text_auto='.2f',
+                    title='Correlation between ROI and Numeric Variables',
+                    color_discrete_sequence=px.colors.qualitative.Bold,  # Paleta moderna y diferente
+                    hover_data={
+                        'Metric_X': True,
+                        'Metric_Y': True,
+                        'Correlation': ':.2f'
+                    }
+                )
+                fig.update_layout(
+                    template='plotly_dark',  # Fondo negro
+                    xaxis_title="Metric",
+                    yaxis_title="Correlation",
+                    height=500,
+                    bargap=0.18,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                fig.update_traces(
+                    marker_line_width=1.5,
+                    marker_line_color='black'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info(
+    "This bar chart visualizes the correlation between ROI and the main numeric variables in the dataset. "
+    "ROI shows the strongest positive correlation with profit margin and net profit, while budget and cost per conversion are negatively correlated. "
+    "These insights help identify the key drivers of performance and support data-driven decisions to maximize campaign efficiency.")
+                
+            with col2:
+                # Distribution of campaign types (pie)
+                st.subheader("Distribution of Campaign Types")
+                campaign_types = top_campaigns['type'].value_counts()
+                fig = go.Figure(
+                    data=[
+                        go.Pie(
+                            labels=campaign_types.index,
+                            values=campaign_types.values,
+                            pull=[0.08 if i == 0 else 0 for i in range(len(campaign_types))],  # Destaca el más frecuente
+                            marker=dict(
+                                colors=px.colors.qualitative.Pastel2  # Paleta moderna y dinámica
+                            ),
+                            textinfo='percent+label',
+                            hoverinfo='label+value+percent'
+                        )
+                    ]
+                )
+                fig.update_layout(
+                    title='Distribution of Successful Campaign Types',
+                    template='plotly_dark',  # Fondo negro
+                    legend_title='Campaign Type',
+                    height=500
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info("The most profitable campaigns are dominated by email and organic types, with social media and podcast also present. "
+        "This distribution suggests that while social media campaigns can be highly effective, email and organic strategies are more consistently represented among top performers. "
+        "Event campaigns are notably absent, confirming their lower profitability.")
 
-            # Correlation with net profit (heatmap)
-            st.subheader("Correlation with Net Profit")
-            correlation_columns = ['net_profit', 'budget', 'conversion_rate', 'calculated_roi', 'campaign_duration', 'revenue']
-            correlation_matrix = filtered_df[correlation_columns].corr()
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
-            ax.set_title('Correlation: Factors Influencing Net Profit')
-            st.pyplot(fig)
-            st.info("Net profit is highly correlated with revenue and conversion rate, and moderately with ROI. "
-    "Budget is not a strong predictor of net profit, reinforcing that efficient allocation and high conversion are more critical than simply increasing spend. "
-    "Campaign duration shows a weak relationship, suggesting that optimal timing is less important than targeting and execution quality.")
+            col1, col2 = st.columns(2)
+            with col1:
+                # Correlation with net profit (heatmap)
+                st.subheader("Correlation with Net Profit")
+                correlation_columns = ['net_profit', 'budget', 'conversion_rate', 'calculated_roi', 'campaign_duration', 'revenue']
+                correlation_matrix = filtered_df[correlation_columns].corr()
+                fig, ax = plt.subplots(figsize=(20, 10))
+                sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
+                ax.set_title('Correlation: Factors Influencing Net Profit')
+                # Cambia el fondo a negro
+                fig.patch.set_facecolor('black')
+                ax.set_facecolor('black')
+                # Cambia el color de los ejes y etiquetas a blanco para contraste
+                ax.title.set_color('white')
+                ax.xaxis.label.set_color('white')
+                ax.yaxis.label.set_color('white')
+                ax.tick_params(axis='x', colors='white')
+                ax.tick_params(axis='y', colors='white')
+                for spine in ax.spines.values():
+                    spine.set_edgecolor('white')
+                st.pyplot(fig)
+                st.info("Net profit is highly correlated with revenue and conversion rate, and moderately with ROI. "
+        "Budget is not a strong predictor of net profit, reinforcing that efficient allocation and high conversion are more critical than simply increasing spend. "
+        "Campaign duration shows a weak relationship, suggesting that optimal timing is less important than targeting and execution quality.")
 
             # Conclusions
             st.markdown("""
@@ -618,112 +1337,267 @@ try:
     "Doubling the budget does not necessarily double the revenue, especially at higher investment levels."
 )
 
-            # Polynomial regression
-            st.subheader("Polynomial Regression: Budget vs Revenue")
-            X = filtered_df[['budget']]
-            y = filtered_df['revenue']
-            degree = 2
-            poly = PolynomialFeatures(degree=degree)
-            X_poly = poly.fit_transform(X)
-            poly_model = LinearRegression()
-            poly_model.fit(X_poly, y)
-            y_poly_pred = poly_model.predict(X_poly)
-            sorted_idx = np.argsort(filtered_df['budget'])
-            sorted_budget = filtered_df['budget'].iloc[sorted_idx]
-            sorted_poly_pred = y_poly_pred[sorted_idx]
-            fig, ax = plt.subplots(figsize=(12, 8))
-            sns.scatterplot(x='budget', y='revenue', data=filtered_df, alpha=0.6, ax=ax)
-            ax.plot(sorted_budget, sorted_poly_pred, color='green', linewidth=2, label=f'Polynomial Regression (degree {degree})')
-            ax.set_title('Budget vs Revenue: Polynomial Model')
-            ax.set_xlabel('Budget')
-            ax.set_ylabel('Revenue')
-            ax.legend()
-            st.pyplot(fig)
-            st.info(
-    "The polynomial regression curve clearly shows diminishing marginal returns: "
-    "as budget increases, revenue grows at a decreasing rate, especially at high investment levels. "
-    "The optimal investment range, where each additional dollar has the greatest impact, is between $30,000 and $70,000. "
-    "Both very low and very high budgets are less efficient, confirming the existence of a saturation point."
+            col1, col2 = st.columns(2)
+            with col1:
+                # Polynomial regression
+                st.subheader("Polynomial Regression: Budget vs Revenue")
+                X = filtered_df[['budget']]
+                y = filtered_df['revenue']
+                degree = 2
+                poly = PolynomialFeatures(degree=degree)
+                X_poly = poly.fit_transform(X)
+                poly_model = LinearRegression()
+                poly_model.fit(X_poly, y)
+                y_poly_pred = poly_model.predict(X_poly)
+                sorted_idx = np.argsort(filtered_df['budget'])
+                sorted_budget = filtered_df['budget'].iloc[sorted_idx]
+                sorted_poly_pred = y_poly_pred[sorted_idx]
+
+                # Usar Plotly para fondo negro e interactividad
+                import plotly.graph_objects as go
+
+                fig = go.Figure()
+
+                # Scatter de los puntos
+                fig.add_trace(go.Scatter(
+                    x=filtered_df['budget'],
+                    y=filtered_df['revenue'],
+                    mode='markers',
+                    name='Campaigns',
+                    marker=dict(color='orange', size=8, line=dict(width=1, color='black')),
+                    hovertemplate='Budget: %{x:,.0f}<br>Revenue: %{y:,.0f}<extra></extra>'
+                ))
+
+                # Línea de regresión polinómica
+                fig.add_trace(go.Scatter(
+                    x=sorted_budget,
+                    y=sorted_poly_pred,
+                    mode='lines',
+                    name=f'Polynomial Regression (degree {degree})',
+                    line=dict(color='lime', width=3),
+                    hovertemplate='Budget: %{x:,.0f}<br>Predicted Revenue: %{y:,.0f}<extra></extra>'
+                ))
+
+                fig.update_layout(
+                    template='plotly_dark',
+                    title='Budget vs Revenue: Polynomial Model',
+                    xaxis_title='Budget',
+                    yaxis_title='Revenue',
+                    height=600,
+                    legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+                st.info(
+        "The polynomial regression curve clearly shows diminishing marginal returns: "
+        "as budget increases, revenue grows at a decreasing rate, especially at high investment levels. "
+        "The optimal investment range, where each additional dollar has the greatest impact, is between $30,000 and $70,000. "
+        "Both very low and very high budgets are less efficient, confirming the existence of a saturation point."
+    )
+
+            with col2:
+                # By campaign type
+                st.subheader("Budget vs Revenue by Campaign Type")
+                fig = go.Figure()
+
+                palette = px.colors.qualitative.Pastel2
+                types = filtered_df['type'].unique()
+                color_map = {t: palette[i % len(palette)] for i, t in enumerate(types)}
+
+                for t in types:
+                    df_type = filtered_df[filtered_df['type'] == t]
+                    fig.add_trace(go.Scatter(
+                        x=df_type['budget'],
+                        y=df_type['revenue'],
+                        mode='markers',
+                        name=t,
+                        marker=dict(color=color_map[t], size=9, line=dict(width=1, color='black')),
+                        hovertemplate=f"Type: {t}<br>Budget: %{{x:,.0f}}<br>Revenue: %{{y:,.0f}}<extra></extra>"
+                    ))
+
+                # Línea de regresión polinómica
+                fig.add_trace(go.Scatter(
+                    x=sorted_budget,
+                    y=sorted_poly_pred,
+                    mode='lines',
+                    name=f'Polynomial Regression (degree {degree})',
+                    line=dict(color='lime', width=3),
+                    hovertemplate='Budget: %{x:,.0f}<br>Predicted Revenue: %{y:,.0f}<extra></extra>'
+                ))
+
+                fig.update_layout(
+                    template='plotly_dark',
+                    title='Budget vs Revenue by Campaign Type',
+                    xaxis_title='Budget',
+                    yaxis_title='Revenue',
+                    height=600,
+                    legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+                st.info(
+        "The relationship between budget and revenue varies by campaign type. "
+        "Podcast, social media, and webinar campaigns show the strongest positive correlations, "
+        "while email campaigns show almost no correlation, indicating that budget is not a key driver for email performance. "
+        "This highlights the need for differentiated budget strategies by campaign type."
+    )
+
+            col1, col2 = st.columns(2)
+            with col1:
+                # Correlation matrix
+                st.subheader("Correlation Matrix")
+                correlation_vars = ['budget', 'revenue', 'calculated_roi', 'conversion_rate', 'campaign_duration']
+                corr_matrix = filtered_df[correlation_vars].corr()
+
+                import plotly.figure_factory as ff
+
+                fig = ff.create_annotated_heatmap(
+                    z=corr_matrix.values.round(2),
+                    x=list(corr_matrix.columns),
+                    y=list(corr_matrix.index),
+                    colorscale='Turbo',  # Paleta moderna y dinámica
+                    showscale=True,
+                    annotation_text=corr_matrix.round(2).astype(str).values
+                )
+                fig.update_layout(
+                    title='Correlation Matrix',
+                    xaxis_title="Metric",
+                    yaxis_title="Metric",
+                    width=700,
+                    height=500,
+                    title_x=0.5,
+                    template='plotly_dark',  # Fondo negro moderno
+                    font=dict(color='white')
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info(
+        "The correlation matrix confirms that budget and revenue are moderately correlated, "
+        "but budget is negatively correlated with ROI. "
+        "Campaign duration and conversion rate show weak relationships with both budget and revenue, "
+        "suggesting that other factors are more important for maximizing efficiency."
 )
 
-            # By campaign type
-            st.subheader("Budget vs Revenue by Campaign Type")
-            fig, ax = plt.subplots(figsize=(12, 8))
-            sns.scatterplot(x='budget', y='revenue', data=filtered_df, alpha=0.6, hue='type', ax=ax)
-            ax.plot(sorted_budget, sorted_poly_pred, color='green', linewidth=2, label=f'Polynomial Regression (degree {degree})')
-            ax.set_title('Budget vs Revenue by Campaign Type')
-            ax.set_xlabel('Budget')
-            ax.set_ylabel('Revenue')
-            ax.legend()
-            st.pyplot(fig)
-            st.info(
-    "The relationship between budget and revenue varies by campaign type. "
-    "Podcast, social media, and webinar campaigns show the strongest positive correlations, "
-    "while email campaigns show almost no correlation, indicating that budget is not a key driver for email performance. "
-    "This highlights the need for differentiated budget strategies by campaign type."
-)
+            with col2:
+                # ROI vs Budget scatter
+                st.subheader("ROI vs Budget by Channel")
+                # Usar Plotly para fondo negro e interactividad
+                fig = go.Figure()
 
-            # Correlation matrix
-            st.subheader("Correlation Matrix")
-            correlation_vars = ['budget', 'revenue', 'calculated_roi', 'conversion_rate', 'campaign_duration']
-            corr_matrix = filtered_df[correlation_vars].corr()
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1, fmt='.2f', ax=ax)
-            ax.set_title('Correlation Matrix')
-            st.pyplot(fig)
-            st.info(
-    "The correlation matrix confirms that budget and revenue are moderately correlated, "
-    "but budget is negatively correlated with ROI. "
-    "Campaign duration and conversion rate show weak relationships with both budget and revenue, "
-    "suggesting that other factors are more important for maximizing efficiency."
-)
+                # Paleta moderna y vibrante para los canales
+                channel_palette = {
+                    "paid": "#636EFA",      # Azul
+                    "organic": "#00CC96",   # Verde
+                    "promotion": "#FFA15A", # Naranja
+                    "referral": "#AB63FA"   # Violeta
+                }
 
-            # ROI vs Budget scatter
-            st.subheader("ROI vs Budget by Channel")
-            fig, ax = plt.subplots(figsize=(12, 8))
-            sns.scatterplot(x='budget', y='calculated_roi', data=filtered_df, alpha=0.6, hue='channel', s=80, ax=ax)
-            lowess = sm.nonparametric.lowess(filtered_df['calculated_roi'], filtered_df['budget'], frac=0.3)
-            ax.plot(lowess[:, 0], lowess[:, 1], color='red', linewidth=3, label='LOWESS Trend')
-            ax.set_title('Budget vs ROI by Channel')
-            ax.set_xlabel('Budget')
-            ax.set_ylabel('ROI')
-            ax.legend()
-            st.pyplot(fig)
-            st.info(
-    "There is a moderate inverse relationship between budget and ROI (correlation ≈ -0.57): "
-    "higher budgets tend to have lower ROI, especially above 70,000. "
-    "The most efficient campaigns are concentrated in the low and mid budget segments, "
-    "while high-budget campaigns show lower and less variable ROI. "
-    "This supports the strategy of focusing investments in the 30,000 - 70,000 range for optimal efficiency."
-)
+                for channel in filtered_df['channel'].unique():
+                    df_channel = filtered_df[filtered_df['channel'] == channel]
+                    fig.add_trace(go.Scatter(
+                        x=df_channel['budget'],
+                        y=df_channel['calculated_roi'],
+                        mode='markers',
+                        name=channel.capitalize(),
+                        marker=dict(
+                            color=channel_palette.get(channel, "#CCCCCC"),
+                            size=10,
+                            line=dict(width=1, color='black')
+                        ),
+                        hovertemplate=f"Channel: {channel.capitalize()}<br>Budget: %{{x:,.0f}}<br>ROI: %{{y:,.2f}}<extra></extra>"
+                    ))
 
-            # Revenue by budget segment (boxplot)
-            st.subheader("Revenue by Budget Segment")
-            filtered_df['budget_segment'] = pd.qcut(filtered_df['budget'], 4, labels=['Low', 'Mid-Low', 'Mid-High', 'High'])
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.boxplot(x='budget_segment', y='revenue', data=filtered_df, palette='GnBu', ax=ax)
-            ax.set_title('Revenue by Budget Segment')
-            st.pyplot(fig)
-            st.info(
-    "Average and median revenue increase with higher budget segments, "
-    "but the variability is also greater in the high-budget group. "
-    "The relationship is not linear: while higher budgets often yield higher absolute revenue, "
-    "the efficiency per dollar invested decreases at the top end. "
-    "The optimal revenue segments are mid-high and high, but with careful attention to efficiency."
-)
+                # LOWESS trend line (global, not by channel)
+                import statsmodels.api as sm
+                lowess = sm.nonparametric.lowess(filtered_df['calculated_roi'], filtered_df['budget'], frac=0.3)
+                fig.add_trace(go.Scatter(
+                    x=lowess[:, 0],
+                    y=lowess[:, 1],
+                    mode='lines',
+                    name='LOWESS Trend',
+                    line=dict(color='red', width=3, dash='dash'),
+                    hovertemplate='Budget: %{x:,.0f}<br>LOWESS ROI: %{y:,.2f}<extra></extra>'
+                ))
 
-            # ROI by budget segment (boxplot)
-            st.subheader("ROI by Budget Segment")
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.boxplot(x='budget_segment', y='calculated_roi', data=filtered_df, palette='Accent', ax=ax)
-            ax.set_title('ROI by Budget Segment')
-            st.pyplot(fig)
-            st.info(
-    "ROI is highest in the low and mid-low budget segments, "
-    "with both mean and median above the global average. "
-    "High-budget campaigns show lower and less dispersed ROI, confirming that efficiency is maximized in moderate investment ranges. "
-    "This reinforces the recommendation to avoid over-investment and focus on optimizing mid-range budgets."
-)
+                fig.update_layout(
+                    template='plotly_dark',
+                    title='Budget vs ROI by Channel',
+                    xaxis_title='Budget',
+                    yaxis_title='ROI',
+                    height=600,
+                    legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+                st.info(
+        "There is a moderate inverse relationship between budget and ROI (correlation ≈ -0.57): "
+        "higher budgets tend to have lower ROI, especially above 70,000. "
+        "The most efficient campaigns are concentrated in the low and mid budget segments, "
+        "while high-budget campaigns show lower and less variable ROI. "
+        "This supports the strategy of focusing investments in the 30,000 - 70,000 range for optimal efficiency."
+    )
+
+            col1, col2 = st.columns(2)
+            with col1:
+                # Revenue by budget segment (boxplot)
+                st.subheader("Revenue by Budget Segment")
+                filtered_df['budget_segment'] = pd.qcut(filtered_df['budget'], 4, labels=['Low', 'Mid-Low', 'Mid-High', 'High'])
+                fig = px.box(
+                    filtered_df,
+                    x='budget_segment',
+                    y='revenue',
+                    color='budget_segment',
+                    color_discrete_sequence=px.colors.qualitative.Vivid,
+                    points="all",
+                    title='Revenue by Budget Segment',
+                    hover_data=filtered_df.columns
+                )
+                fig.update_traces(quartilemethod="exclusive")
+                fig.update_layout(
+                    template='plotly_dark',
+                    xaxis_title='Budget Segment',
+                    yaxis_title='Revenue',
+                    showlegend=False,
+                    height=400,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info(
+        "Average and median revenue increase with higher budget segments, "
+        "but the variability is also greater in the high-budget group. "
+        "The relationship is not linear: while higher budgets often yield higher absolute revenue, "
+        "the efficiency per dollar invested decreases at the top end. "
+        "The optimal revenue segments are mid-high and high, but with careful attention to efficiency."
+    )
+
+            with col2:
+                # ROI by budget segment (boxplot)
+                st.subheader("ROI by Budget Segment")
+                fig = px.box(
+                    filtered_df,
+                    x='budget_segment',
+                    y='calculated_roi',
+                    color='budget_segment',
+                    color_discrete_sequence=px.colors.qualitative.Pastel2,
+                    points="all",
+                    title='ROI by Budget Segment',
+                    hover_data=filtered_df.columns
+                )
+                fig.update_traces(quartilemethod="exclusive")
+                fig.update_layout(
+                    template='plotly_dark',
+                    xaxis_title='Budget Segment',
+                    yaxis_title='ROI',
+                    showlegend=False,
+                    height=400,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                st.info(
+        "ROI is highest in the low and mid-low budget segments, "
+        "with both mean and median above the global average. "
+        "High-budget campaigns show lower and less dispersed ROI, confirming that efficiency is maximized in moderate investment ranges. "
+        "This reinforces the recommendation to avoid over-investment and focus on optimizing mid-range budgets."
+    )
 
             # Conclusions
             st.markdown("""
@@ -761,17 +1635,111 @@ try:
 
             # ROI vs Revenue scatter
             st.subheader("ROI vs Revenue Quadrant")
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.scatterplot(data=high_performance, x='revenue', y='calculated_roi', size='budget', hue='type', sizes=(50, 400), alpha=0.7, ax=ax)
-            ax.set_title('High-Performance Campaigns: ROI vs Revenue')
-            ax.set_xlabel('Revenue')
-            ax.set_ylabel('ROI')
-            st.pyplot(fig)
+
+            # Scatterplot moderno y dinámico con Plotly
+            fig = go.Figure()
+
+            # Paleta moderna para los tipos de campaña
+            type_palette = px.colors.qualitative.Vivid
+            type_list = high_performance['type'].unique()
+            color_map = {t: type_palette[i % len(type_palette)] for i, t in enumerate(type_list)}
+
+            for t in type_list:
+                df_type = high_performance[high_performance['type'] == t]
+                fig.add_trace(go.Scatter(
+                    x=df_type['revenue'],
+                    y=df_type['calculated_roi'],
+                    mode='markers',
+                    name=t,
+                    marker=dict(
+                        color=color_map[t],
+                        size=12 + 18 * (df_type['budget'] - high_performance['budget'].min()) / (high_performance['budget'].max() - high_performance['budget'].min() + 1e-6),
+                        line=dict(width=1, color='black'),
+                        opacity=0.85
+                    ),
+                    hovertemplate=(
+                        f"Type: {t}<br>"
+                        "Revenue: %{x:,.0f}<br>"
+                        "ROI: %{y:,.2f}<br>"
+                        "Budget: %{marker.size:.0f}"
+                        "<extra></extra>"
+                    )
+                ))
+
+            fig.update_layout(
+                template='plotly_dark',
+                title='High-Performance Campaigns: ROI vs Revenue',
+                xaxis_title='Revenue',
+                yaxis_title='ROI',
+                height=480,
+                width=820,
+                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+                margin=dict(l=30, r=30, t=60, b=40)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
             st.info(
     "The scatter plot shows that high ROI and high revenue are not always achieved simultaneously, but social media campaigns are most likely to reach both. "
     "Moderate budgets (not the highest) are often associated with optimal performance, indicating that efficiency, not just investment, is key. "
     "There are also outliers with exceptional ROI but moderate revenue, suggesting that niche targeting and operational excellence can yield outstanding results even without massive budgets."
 )
+            
+            # --- Gráfico 3D interactivo de campañas de alto rendimiento ---
+            st.subheader("3D Analysis of High-Performance Campaigns")
+
+            # Filtros interactivos para tipo y canal
+            types_3d = high_performance['type'].unique().tolist()
+            channels_3d = high_performance['channel'].unique().tolist()
+            selected_types_3d = st.multiselect("Filter Campaign Types (3D)", options=types_3d, default=types_3d, key="3d_types")
+            selected_channels_3d = st.multiselect("Filter Channels (3D)", options=channels_3d, default=channels_3d, key="3d_channels")
+
+            filtered_3d = high_performance[
+                high_performance['type'].isin(selected_types_3d) &
+                high_performance['channel'].isin(selected_channels_3d)
+            ]
+
+            # Paleta moderna para el color (usa calculated_roi como ejemplo)
+            color_scale = px.colors.sequential.Viridis
+
+            fig_3d = go.Figure(data=[go.Scatter3d(
+                x=filtered_3d['calculated_roi'],
+                y=filtered_3d['revenue'],
+                z=filtered_3d['conversion_rate'],
+                mode='markers',
+                marker=dict(
+                    size=filtered_3d['budget'] / 10000 + 6,
+                    color=filtered_3d['calculated_roi'],  # Cambiado aquí
+                    colorscale=color_scale,
+                    colorbar=dict(title='ROI'),
+                    opacity=0.8,
+                    line=dict(width=1, color='black')
+                ),
+                text=filtered_3d['campaign_name'],
+                hovertemplate=(
+                    "<b>%{text}</b><br>"
+                    "ROI: %{x:.2f}<br>"
+                    "Revenue: %{y:,.0f}<br>"
+                    "Conversion Rate: %{z:.2f}<br>"
+                    "Budget: %{marker.size:.0f}k<br>"
+                    "ROI: %{marker.color:.2f}<extra></extra>"
+                )
+            )])
+
+            fig_3d.update_layout(
+                template='plotly_dark',
+                title='3D Analysis of High-Performance Campaigns',
+                scene=dict(
+                    xaxis_title='ROI',
+                    yaxis_title='Revenue',
+                    zaxis_title='Conversion Rate',
+                    bgcolor='black'
+                ),
+                height=540,
+                width=820,
+                margin=dict(l=20, r=20, t=60, b=20)
+            )
+
+            st.plotly_chart(fig_3d, use_container_width=True)
 
             # Conclusions
             st.markdown("""
@@ -797,11 +1765,41 @@ try:
             month_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
             monthly_performance = monthly_performance.reindex(month_order)
             st.subheader("Monthly Performance Trends")
-            fig, ax = plt.subplots(figsize=(14, 6))
-            monthly_performance.plot(ax=ax)
-            ax.set_title('Monthly Performance Trends')
-            ax.set_xlabel('Month')
-            st.pyplot(fig)
+
+            # Usar Plotly para un gráfico moderno, dinámico y con fondo negro
+            monthly_performance = monthly_performance.reset_index()
+            fig = go.Figure()
+
+            # Paleta moderna y vibrante
+            color_map = {
+                'revenue': '#00CC96',
+                'calculated_roi': '#636EFA',
+                'conversion_rate': '#FFA15A'
+            }
+
+            for metric in ['revenue', 'calculated_roi', 'conversion_rate']:
+                fig.add_trace(go.Scatter(
+                    x=monthly_performance['start_month_name'],
+                    y=monthly_performance[metric],
+                    mode='lines+markers',
+                    name=metric.replace('_', ' ').title(),
+                    line=dict(width=3, color=color_map[metric]),
+                    marker=dict(size=9, color=color_map[metric], line=dict(width=1, color='black')),
+                    hovertemplate=f"Month: %{{x}}<br>{metric.replace('_', ' ').title()}: %{{y:,.2f}}<extra></extra>"
+                ))
+
+            fig.update_layout(
+                template='plotly_dark',
+                title='Monthly Performance Trends',
+                xaxis_title='Month',
+                yaxis_title='Value',
+                height=380,
+                width=820,
+                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+                margin=dict(l=30, r=30, t=60, b=40)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
             st.info(
     "There are two clear performance peaks: spring (April-May) and autumn (September-October). "
     "These months show the highest average ROI and conversion rates, aligning with key business and consumer cycles. "
@@ -813,13 +1811,58 @@ try:
             filtered_df['start_quarter'] = filtered_df['start_date'].dt.to_period('Q')
             quarterly_performance = filtered_df.groupby('start_quarter')[['revenue', 'calculated_roi', 'conversion_rate', 'net_profit', 'campaign_duration']].mean()
             st.subheader("Quarterly Performance Trends")
-            fig, axs = plt.subplots(2, 2, figsize=(16, 12))
-            quarterly_performance['revenue'].plot(kind='bar', ax=axs[0, 0], color='skyblue', title='Revenue by Quarter')
-            quarterly_performance['calculated_roi'].plot(kind='bar', ax=axs[0, 1], color='orange', title='ROI by Quarter')
-            quarterly_performance['conversion_rate'].plot(kind='bar', ax=axs[1, 0], color='green', title='Conversion Rate by Quarter')
-            quarterly_performance['net_profit'].plot(kind='bar', ax=axs[1, 1], color='red', title='Net Profit by Quarter')
-            plt.tight_layout()
-            st.pyplot(fig)
+
+            quarters = quarterly_performance.index.astype(str)
+            color_map = {
+                'revenue': '#00CC96',
+                'calculated_roi': '#636EFA',
+                'conversion_rate': '#FFA15A',
+                'net_profit': '#EF553B'
+            }
+
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=quarters,
+                y=quarterly_performance['revenue'],
+                name='Revenue',
+                marker_color=color_map['revenue'],
+                hovertemplate='Quarter: %{x}<br>Revenue: %{y:,.0f}<extra></extra>'
+            ))
+            fig.add_trace(go.Bar(
+                x=quarters,
+                y=quarterly_performance['calculated_roi'],
+                name='ROI',
+                marker_color=color_map['calculated_roi'],
+                hovertemplate='Quarter: %{x}<br>ROI: %{y:,.2f}<extra></extra>'
+            ))
+            fig.add_trace(go.Bar(
+                x=quarters,
+                y=quarterly_performance['conversion_rate'],
+                name='Conversion Rate',
+                marker_color=color_map['conversion_rate'],
+                hovertemplate='Quarter: %{x}<br>Conversion Rate: %{y:,.2f}<extra></extra>'
+            ))
+            fig.add_trace(go.Bar(
+                x=quarters,
+                y=quarterly_performance['net_profit'],
+                name='Net Profit',
+                marker_color=color_map['net_profit'],
+                hovertemplate='Quarter: %{x}<br>Net Profit: %{y:,.0f}<extra></extra>'
+            ))
+
+            fig.update_layout(
+                template='plotly_dark',
+                barmode='group',
+                title='Quarterly Performance Trends',
+                xaxis_title='Quarter',
+                yaxis_title='Value',
+                height=420,
+                width=820,
+                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+                margin=dict(l=30, r=30, t=60, b=40)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
             st.info(
     "Q2 and Q4 are the most profitable quarters, with Q2 leading in ROI and Q4 in conversion rate. "
     "Longer campaigns perform best in Q1, while short, intensive campaigns excel in Q4. "
@@ -830,12 +1873,80 @@ try:
             filtered_df['start_year'] = filtered_df['start_date'].dt.year
             yearly_performance = filtered_df.groupby('start_year')[['revenue', 'calculated_roi', 'conversion_rate']].mean()
             st.subheader("Annual Performance Trends")
-            fig, axs = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
-            yearly_performance['revenue'].plot(ax=axs[0], marker='o', linewidth=2, title='Revenue by Year')
-            yearly_performance['calculated_roi'].plot(ax=axs[1], marker='o', linewidth=2, title='ROI by Year')
-            yearly_performance['conversion_rate'].plot(ax=axs[2], marker='o', linewidth=2, title='Conversion Rate by Year')
-            plt.tight_layout()
-            st.pyplot(fig)
+            color_map = {
+            'revenue': '#00CC96',
+            'calculated_roi': '#636EFA',
+            'conversion_rate': '#FFA15A'
+        }
+
+        years = yearly_performance.index.astype(str)
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            fig_rev = go.Figure()
+            fig_rev.add_trace(go.Scatter(
+                x=years,
+                y=yearly_performance['revenue'],
+                mode='lines+markers',
+                name='Revenue',
+                line=dict(width=3, color=color_map['revenue']),
+                marker=dict(size=8, color=color_map['revenue'], line=dict(width=1, color='black')),
+                hovertemplate="Year: %{x}<br>Revenue: %{y:,.0f}<extra></extra>"
+            ))
+            fig_rev.update_layout(
+                template='plotly_dark',
+                title='Revenue by Year',
+                xaxis_title='Year',
+                yaxis_title='Revenue',
+                height=300,
+                width=320,
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig_rev, use_container_width=True)
+
+        with col2:
+            fig_roi = go.Figure()
+            fig_roi.add_trace(go.Scatter(
+                x=years,
+                y=yearly_performance['calculated_roi'],
+                mode='lines+markers',
+                name='ROI',
+                line=dict(width=3, color=color_map['calculated_roi']),
+                marker=dict(size=8, color=color_map['calculated_roi'], line=dict(width=1, color='black')),
+                hovertemplate="Year: %{x}<br>ROI: %{y:,.2f}<extra></extra>"
+            ))
+            fig_roi.update_layout(
+                template='plotly_dark',
+                title='ROI by Year',
+                xaxis_title='Year',
+                yaxis_title='ROI',
+                height=300,
+                width=320,
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig_roi, use_container_width=True)
+
+        with col3:
+            fig_conv = go.Figure()
+            fig_conv.add_trace(go.Scatter(
+                x=years,
+                y=yearly_performance['conversion_rate'],
+                mode='lines+markers',
+                name='Conversion Rate',
+                line=dict(width=3, color=color_map['conversion_rate']),
+                marker=dict(size=8, color=color_map['conversion_rate'], line=dict(width=1, color='black')),
+                hovertemplate="Year: %{x}<br>Conversion Rate: %{y:,.2f}<extra></extra>"
+            ))
+            fig_conv.update_layout(
+                template='plotly_dark',
+                title='Conversion Rate by Year',
+                xaxis_title='Year',
+                yaxis_title='Conversion Rate',
+                height=300,
+                width=320,
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig_conv, use_container_width=True)
             st.info(
     "Yearly trends show stable or slightly increasing performance, with no evidence of long-term decline. "
     "This indicates that the marketing strategy is resilient to annual fluctuations and external shocks, and that best practices are being maintained over time."
